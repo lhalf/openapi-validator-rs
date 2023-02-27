@@ -1,0 +1,18 @@
+openapi: 3.0.0
+
+info:
+  description: API to handle generic two-way HTTP requests
+  version: "1.0.0"
+  title: Swagger ReST Article
+
+paths:
+  /ping:
+    get:
+      summary: Ping
+      responses:
+        200:
+          description: API call successful
+          content:
+            application/json:
+              schema:
+                type: array
