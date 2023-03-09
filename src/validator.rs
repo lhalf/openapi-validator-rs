@@ -2,6 +2,7 @@ struct Validator {
     api: openapiv3::OpenAPI,
 }
 
+#[allow(dead_code)]
 impl Validator {
     fn new(api: openapiv3::OpenAPI) -> Self {
         Self{api}
