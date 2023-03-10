@@ -10,30 +10,38 @@ impl Validator {
 
     //take &self rather than self otherwise Validator is consumed by validate_request (dropped)
     fn validate_request(&self, request: Request) -> Result<Request, ()> {
-        self.validate_path(request).and_then(|request| self.validate_method(request))
+        self.get_path(request.path())?.get_method(request.method())?;
+        Ok(request)
     }
 
-    fn validate_path(&self, request: Request) -> Result<Request, ()> {
-        if self.api.paths.paths.keys().any(|path| request.path() == path) {
-            return Ok(request);
-        }
-        Err(())
-    }
-
-    fn validate_method(&self, request: Request) -> Result<Request, ()> {
-        match request.method() {
-            "get" => self.validate_get(request),
-            _ => Err(())
-        }
-    }
-
-    fn validate_get(&self, request: Request) -> Result<Request, ()> {
-        if self.api.paths.paths[request.path.as_str()].as_item().unwrap().get.is_some() {
-            return Ok(request);
+    fn get_path(&self, path: &str) -> Result<PathValidator, ()> {
+        if let Some(path) = self.api.paths.paths.get(path) {
+            return Ok(PathValidator{path: path.as_item().unwrap()})
         }
         Err(())
     }
 }
+
+struct PathValidator<'path> {
+    path: &'path openapiv3::PathItem
+}
+
+impl<'path>  PathValidator<'path>  {
+    fn get_method(&self, method: &str) -> Result<(), ()> {
+        match method {
+            "get" => self.get_get(),
+            _ => Err(())
+        }
+    }
+
+    fn get_get(&self) -> Result<(), ()> {
+        if self.path.get.is_some() {
+            return Ok(());
+        }
+        Err(())
+    }
+}
+
 
 #[derive(Debug, PartialEq)]
 struct Request {
