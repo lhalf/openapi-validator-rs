@@ -15,7 +15,17 @@ paths:
 
   /multiple/allowed/methods:
     put:
-      summary: Allows multiple methods
+      summary: Allows put method
+      responses:
+        200:
+          description: API call successful
+    delete:
+      summary: Allows delete method
+      responses:
+        200:
+          description: API call successful
+    post:
+      summary: Allows post method
       responses:
         200:
           description: API call successful

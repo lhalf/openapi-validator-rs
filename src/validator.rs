@@ -31,6 +31,8 @@ impl<'path>  PathValidator<'path>  {
         match method {
             "get" => self.get_get(),
             "put" => self.get_put(),
+            "delete" => self.get_delete(),
+            "post" => self.get_post(),
             _ => Err(())
         }
     }
@@ -44,6 +46,20 @@ impl<'path>  PathValidator<'path>  {
 
     fn get_put(&self) -> Result<(), ()> {
         if self.path.put.is_some() {
+            return Ok(());
+        }
+        Err(())
+    }
+
+    fn get_post(&self) -> Result<(), ()> {
+        if self.path.post.is_some() {
+            return Ok(());
+        }
+        Err(())
+    }
+
+    fn get_delete(&self) -> Result<(), ()> {
+        if self.path.delete.is_some() {
             return Ok(());
         }
         Err(())
@@ -97,9 +113,23 @@ mod test {
     }
 
     #[test]
-    fn validator_can_reject_a_request_with_invalid_method() {
+    fn validator_can_work_with_a_request_with_put_method() {
         let validator = make_validator();
         let request = Request{path: "/multiple/allowed/methods".to_string(), method: "put".to_string()};
+        assert!(validator.validate_request(request).is_ok());
+    }
+
+    #[test]
+    fn validator_can_work_with_a_request_with_post_method() {
+        let validator = make_validator();
+        let request = Request{path: "/multiple/allowed/methods".to_string(), method: "post".to_string()};
+        assert!(validator.validate_request(request).is_ok());
+    }
+
+    #[test]
+    fn validator_can_work_with_a_request_with_delete_method() {
+        let validator = make_validator();
+        let request = Request{path: "/multiple/allowed/methods".to_string(), method: "delete".to_string()};
         assert!(validator.validate_request(request).is_ok());
     }
 }
