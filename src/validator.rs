@@ -10,7 +10,8 @@ impl Validator {
 
     //take &self rather than self otherwise Validator is consumed by validate_request (dropped)
     fn validate_request(&self, request: Request) -> Result<Request, ()> {
-        self.get_path(request.path())?.get_method(request.method())?;
+        self.get_path(request.path())?
+            .get_method(request.method())?;
         Ok(request)
     }
 
