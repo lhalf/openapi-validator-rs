@@ -102,35 +102,40 @@ mod test {
     #[test]
     fn validator_can_work_a_request_with_valid_path() {
         let validator = make_validator();
-        let request = Request{path: "/ping".to_string(), method: "get".to_string()};
+        let request = Request{path: "/ping".to_string(),
+                              method: "get".to_string()};
         assert!(validator.validate_request(request).is_ok());
     }
 
     #[test]
     fn validator_can_reject_a_request_with_invalid_path() {
         let validator = make_validator();
-        let request = Request{path: "/not/ping".to_string(), method: "get".to_string()};
+        let request = Request{path: "/not/ping".to_string(),
+                              method: "get".to_string()};
         assert_eq!(Err(()), validator.validate_request(request));
     }
 
     #[test]
     fn validator_can_work_with_a_request_with_put_method() {
         let validator = make_validator();
-        let request = Request{path: "/multiple/allowed/methods".to_string(), method: "put".to_string()};
+        let request = Request{path: "/multiple/allowed/methods".to_string(),
+                              method: "put".to_string()};
         assert!(validator.validate_request(request).is_ok());
     }
 
     #[test]
     fn validator_can_work_with_a_request_with_post_method() {
         let validator = make_validator();
-        let request = Request{path: "/multiple/allowed/methods".to_string(), method: "post".to_string()};
+        let request = Request{path: "/multiple/allowed/methods".to_string(),
+                              method: "post".to_string()};
         assert!(validator.validate_request(request).is_ok());
     }
 
     #[test]
     fn validator_can_work_with_a_request_with_delete_method() {
         let validator = make_validator();
-        let request = Request{path: "/multiple/allowed/methods".to_string(), method: "delete".to_string()};
+        let request = Request{path: "/multiple/allowed/methods".to_string(),
+                              method: "delete".to_string()};
         assert!(validator.validate_request(request).is_ok());
     }
 }
