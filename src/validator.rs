@@ -30,12 +30,20 @@ impl<'path>  PathValidator<'path>  {
     fn get_method(&self, method: &str) -> Result<(), ()> {
         match method {
             "get" => self.get_get(),
+            "put" => self.get_put(),
             _ => Err(())
         }
     }
 
     fn get_get(&self) -> Result<(), ()> {
         if self.path.get.is_some() {
+            return Ok(());
+        }
+        Err(())
+    }
+
+    fn get_put(&self) -> Result<(), ()> {
+        if self.path.put.is_some() {
             return Ok(());
         }
         Err(())
@@ -91,7 +99,7 @@ mod test {
     #[test]
     fn validator_can_reject_a_request_with_invalid_method() {
         let validator = make_validator();
-        let request = Request{path: "/ping".to_string(), method: "put".to_string()};
-        assert_eq!(Err(()), validator.validate_request(request));
+        let request = Request{path: "/multiple/allowed/methods".to_string(), method: "put".to_string()};
+        assert!(validator.validate_request(request).is_ok());
     }
 }

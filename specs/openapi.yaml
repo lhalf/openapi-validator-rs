@@ -12,3 +12,10 @@ paths:
       responses:
         200:
           description: API call successful
+
+  /multiple/allowed/methods:
+    put:
+      summary: Allows multiple methods
+      responses:
+        200:
+          description: API call successful
