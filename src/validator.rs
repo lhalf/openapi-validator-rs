@@ -93,7 +93,7 @@ mod test {
     }
 
     #[test]
-    fn validator_can_work_a_request_with_valid_path() {
+    fn validator_can_accept_a_request_with_valid_path() {
         let validator = make_validator();
         let request = Request{path: "/ping".to_string(),
                               operation: "get".to_string(),
@@ -111,7 +111,7 @@ mod test {
     }
 
     #[test]
-    fn validator_can_work_with_a_request_with_put_operation() {
+    fn validator_can_accept_a_request_with_put_operation() {
         let validator = make_validator();
         let request = Request{path: "/multiple/allowed/operations".to_string(),
                               operation: "put".to_string(),
@@ -120,7 +120,7 @@ mod test {
     }
 
     #[test]
-    fn validator_can_work_with_a_request_with_post_operation() {
+    fn validator_can_accept_a_request_with_post_operation() {
         let validator = make_validator();
         let request = Request{path: "/multiple/allowed/operations".to_string(),
                               operation: "post".to_string(),
@@ -129,7 +129,7 @@ mod test {
     }
 
     #[test]
-    fn validator_can_work_with_a_request_with_delete_operation() {
+    fn validator_can_accept_a_request_with_delete_operation() {
         let validator = make_validator();
         let request = Request{path: "/multiple/allowed/operations".to_string(),
                               operation: "delete".to_string(),
@@ -144,5 +144,32 @@ mod test {
                               operation: "post".to_string(),
                               body: vec![]};
         assert_eq!(Err(()), validator.validate_request(request));
+    }
+
+    #[test]
+    fn validator_can_accept_a_request_with_a_body_if_required() {
+        let validator = make_validator();
+        let request = Request{path: "/required/body".to_string(),
+            operation: "post".to_string(),
+            body: vec![b'b', b'a', b'b', b'e']};
+        assert!(validator.validate_request(request).is_ok());
+    }
+
+    #[test]
+    fn validator_can_accept_a_request_with_no_body_if_not_required() {
+        let validator = make_validator();
+        let request = Request{path: "/not/required/body".to_string(),
+            operation: "post".to_string(),
+            body: vec![]};
+        assert!(validator.validate_request(request).is_ok());
+    }
+
+    #[test]
+    fn validator_can_accept_a_request_with_a_body_if_not_required() {
+        let validator = make_validator();
+        let request = Request{path: "/not/required/body".to_string(),
+            operation: "post".to_string(),
+            body: vec![b'b', b'a', b'b', b'e']};
+        assert!(validator.validate_request(request).is_ok());
     }
 }

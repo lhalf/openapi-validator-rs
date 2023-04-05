@@ -35,10 +35,15 @@ paths:
       summary: Requires a body
       requestBody:
         required: true
-        content:
-          text/plain:
-            schema:
-              type: string
+      responses:
+        200:
+          description: API call successful
+
+  /not/required/body:
+    post:
+      summary: Requires a body
+      requestBody:
+        required: false
       responses:
         200:
           description: API call successful
