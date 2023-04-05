@@ -30,41 +30,14 @@ struct ValidatedPath<'path> {
 
 impl<'path>  ValidatedPath<'path>  {
     fn validate_operation(&self, operation: &str) -> Result<ValidatedOperation, ()> {
-        match operation {
-            "get" => self.validate_get(),
-            "put" => self.validate_put(),
-            "delete" => self.validate_delete(),
-            "post" => self.validate_post(),
+        let operation_spec = match operation {
+            "get" => self.path_spec.get.as_ref().ok_or(()),
+            "put" => self.path_spec.put.as_ref().ok_or(()),
+            "delete" => self.path_spec.delete.as_ref().ok_or(()),
+            "post" => self.path_spec.post.as_ref().ok_or(()),
             _ => Err(())
-        }
-    }
-
-    fn validate_get(&self) -> Result<ValidatedOperation, ()> {
-        if let Some(operation_spec) = self.path_spec.get.as_ref() {
-            return Ok(ValidatedOperation{operation_spec});
-        }
-        Err(())
-    }
-
-    fn validate_put(&self) -> Result<ValidatedOperation, ()> {
-        if let Some(operation_spec) = self.path_spec.put.as_ref() {
-            return Ok(ValidatedOperation{operation_spec});
-        }
-        Err(())
-    }
-
-    fn validate_post(&self) -> Result<ValidatedOperation, ()> {
-        if let Some(operation_spec) = self.path_spec.post.as_ref() {
-            return Ok(ValidatedOperation{operation_spec});
-        }
-        Err(())
-    }
-
-    fn validate_delete(&self) -> Result<ValidatedOperation, ()> {
-        if let Some(operation_spec) = self.path_spec.delete.as_ref() {
-            return Ok(ValidatedOperation{operation_spec});
-        }
-        Err(())
+        }?;
+        Ok(ValidatedOperation { operation_spec })
     }
 }
 
