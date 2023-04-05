@@ -13,19 +13,32 @@ paths:
         200:
           description: API call successful
 
-  /multiple/allowed/methods:
+  /multiple/allowed/operations:
     put:
-      summary: Allows put method
+      summary: Allows put operation
       responses:
         200:
           description: API call successful
     delete:
-      summary: Allows delete method
+      summary: Allows delete operation
       responses:
         200:
           description: API call successful
     post:
-      summary: Allows post method
+      summary: Allows post operation
+      responses:
+        200:
+          description: API call successful
+
+  /required/body:
+    post:
+      summary: Requires a body
+      requestBody:
+        required: true
+        content:
+          text/plain:
+            schema:
+              type: string
       responses:
         200:
           description: API call successful
