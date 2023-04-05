@@ -10,56 +10,56 @@ impl Validator {
 
     //take &self rather than self otherwise Validator is consumed by validate_request (dropped)
     fn validate_request(&self, request: Request) -> Result<Request, ()> {
-        self.get_path(request.path())?
-            .get_method(request.method())?;
+        self.validate_path(request.path())?
+            .validate_method(request.method())?;
         Ok(request)
     }
 
-    fn get_path(&self, path: &str) -> Result<PathValidator, ()> {
+    fn validate_path(&self, path: &str) -> Result<ValidatedPath, ()> {
         if let Some(path) = self.api.paths.paths.get(path) {
-            return Ok(PathValidator{path: path.as_item().unwrap()})
+            return Ok(ValidatedPath{path: path.as_item().unwrap()})
         }
         Err(())
     }
 }
 
-struct PathValidator<'path> {
+struct ValidatedPath<'path> {
     path: &'path openapiv3::PathItem
 }
 
-impl<'path>  PathValidator<'path>  {
-    fn get_method(&self, method: &str) -> Result<(), ()> {
+impl<'path>  ValidatedPath<'path>  {
+    fn validate_method(&self, method: &str) -> Result<(), ()> {
         match method {
-            "get" => self.get_get(),
-            "put" => self.get_put(),
-            "delete" => self.get_delete(),
-            "post" => self.get_post(),
+            "get" => self.validate_get(),
+            "put" => self.validate_put(),
+            "delete" => self.validate_delete(),
+            "post" => self.validate_post(),
             _ => Err(())
         }
     }
 
-    fn get_get(&self) -> Result<(), ()> {
+    fn validate_get(&self) -> Result<(), ()> {
         if self.path.get.is_some() {
             return Ok(());
         }
         Err(())
     }
 
-    fn get_put(&self) -> Result<(), ()> {
+    fn validate_put(&self) -> Result<(), ()> {
         if self.path.put.is_some() {
             return Ok(());
         }
         Err(())
     }
 
-    fn get_post(&self) -> Result<(), ()> {
+    fn validate_post(&self) -> Result<(), ()> {
         if self.path.post.is_some() {
             return Ok(());
         }
         Err(())
     }
 
-    fn get_delete(&self) -> Result<(), ()> {
+    fn validate_delete(&self) -> Result<(), ()> {
         if self.path.delete.is_some() {
             return Ok(());
         }
