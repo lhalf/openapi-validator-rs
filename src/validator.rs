@@ -17,15 +17,15 @@ impl Validator {
     }
 
     fn validate_path(&self, path: &str) -> Result<ValidatedPath, ()> {
-        if let Some(path) = self.api.paths.paths.get(path) {
-            return Ok(ValidatedPath{path: path.as_item().unwrap()})
+        if let Some(path_spec) = self.api.paths.paths.get(path).and_then(openapiv3::ReferenceOr::as_item) {
+            return Ok(ValidatedPath{path_spec})
         }
         Err(())
     }
 }
 
 struct ValidatedPath<'path> {
-    path: &'path openapiv3::PathItem
+    path_spec: &'path openapiv3::PathItem
 }
 
 impl<'path>  ValidatedPath<'path>  {
@@ -40,42 +40,42 @@ impl<'path>  ValidatedPath<'path>  {
     }
 
     fn validate_get(&self) -> Result<ValidatedOperation, ()> {
-        if let Some(operation) = self.path.get.as_ref() {
-            return Ok(ValidatedOperation{operation});
+        if let Some(operation_spec) = self.path_spec.get.as_ref() {
+            return Ok(ValidatedOperation{operation_spec});
         }
         Err(())
     }
 
     fn validate_put(&self) -> Result<ValidatedOperation, ()> {
-        if let Some(operation) = self.path.put.as_ref() {
-            return Ok(ValidatedOperation{operation});
+        if let Some(operation_spec) = self.path_spec.put.as_ref() {
+            return Ok(ValidatedOperation{operation_spec});
         }
         Err(())
     }
 
     fn validate_post(&self) -> Result<ValidatedOperation, ()> {
-        if let Some(operation) = self.path.post.as_ref() {
-            return Ok(ValidatedOperation{operation});
+        if let Some(operation_spec) = self.path_spec.post.as_ref() {
+            return Ok(ValidatedOperation{operation_spec});
         }
         Err(())
     }
 
     fn validate_delete(&self) -> Result<ValidatedOperation, ()> {
-        if let Some(operation) = self.path.delete.as_ref() {
-            return Ok(ValidatedOperation{operation});
+        if let Some(operation_spec) = self.path_spec.delete.as_ref() {
+            return Ok(ValidatedOperation{operation_spec});
         }
         Err(())
     }
 }
 
 struct ValidatedOperation<'operation> {
-    operation: &'operation openapiv3::Operation
+    operation_spec: &'operation openapiv3::Operation
 }
 
 impl<'operation>  ValidatedOperation<'operation> {
     fn validate_body(&self, body: &[u8]) -> Result<(), ()> {
-        if let Some(spec_body) = self.operation.request_body.as_ref().and_then(openapiv3::ReferenceOr::as_item) {
-            if spec_body.required && body.is_empty() {
+        if let Some(body_spec) = self.operation_spec.request_body.as_ref().and_then(openapiv3::ReferenceOr::as_item) {
+            if body_spec.required && body.is_empty() {
                 return Err(());
             }
         }
