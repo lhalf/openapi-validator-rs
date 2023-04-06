@@ -47,3 +47,16 @@ paths:
       responses:
         200:
           description: API call successful
+
+  /required/json/body:
+    post:
+      summary: Requires a JSON body
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: unused
+      responses:
+        200:
+          description: API call successful

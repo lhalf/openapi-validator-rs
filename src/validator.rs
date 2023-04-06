@@ -47,11 +47,26 @@ struct ValidatedOperation<'operation> {
 
 impl<'operation>  ValidatedOperation<'operation> {
     fn validate_body(&self, body: &[u8]) -> Result<(), ()> {
-        if let Some(body_spec) = self.operation_spec.request_body.as_ref().and_then(openapiv3::ReferenceOr::as_item) {
-            if body_spec.required && body.is_empty() {
-                return Err(());
+        let body_spec = match self.operation_spec.request_body.as_ref().and_then(openapiv3::ReferenceOr::as_item) {
+            Some(body_spec) => body_spec,
+            None => return Ok(())
+        };
+
+        if body_spec.required && body.is_empty() {
+            return Err(());
+        }
+
+        if !body_spec.required && body.is_empty() {
+            return Ok(());
+        }
+
+        if body_spec.content.contains_key("application/json") {
+            return match serde_json::from_slice::<serde_json::Value>(body) {
+                Ok(_) => Ok(()),
+                Err(_) => Err(())
             }
         }
+
         Ok(())
     }
 }
@@ -171,5 +186,23 @@ mod test {
             operation: "post".to_string(),
             body: vec![b'b', b'a', b'b', b'e']};
         assert!(validator.validate_request(request).is_ok());
+    }
+
+    #[test]
+    fn validator_can_accept_a_request_with_a_json_body_if_required() {
+        let validator = make_validator();
+        let request = Request{path: "/required/json/body".to_string(),
+            operation: "post".to_string(),
+            body: vec![b'{', b'}']};
+        assert!(validator.validate_request(request).is_ok());
+    }
+
+    #[test]
+    fn validator_can_reject_a_request_with_invalid_json_body_if_required() {
+        let validator = make_validator();
+        let request = Request{path: "/required/json/body".to_string(),
+            operation: "post".to_string(),
+            body: vec![b'b', b'a', b'b', b'e']};
+        assert_eq!(Err(()), validator.validate_request(request));
     }
 }
