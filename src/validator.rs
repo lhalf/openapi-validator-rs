@@ -67,6 +67,13 @@ impl<'operation>  ValidatedOperation<'operation> {
             }
         }
 
+        if body_spec.content.contains_key("text/plain; charset=utf-8") {
+            return match std::str::from_utf8(body) {
+                Ok(_) => Ok(()),
+                Err(_) => Err(())
+            }
+        }
+
         Ok(())
     }
 }
@@ -203,6 +210,24 @@ mod test {
         let request = Request{path: "/required/json/body".to_string(),
             operation: "post".to_string(),
             body: vec![b'b', b'a', b'b', b'e']};
+        assert_eq!(Err(()), validator.validate_request(request));
+    }
+
+    #[test]
+    fn validator_can_accept_a_request_with_valid_utf8_body_if_required() {
+        let validator = make_validator();
+        let request = Request{path: "/required/plain/text/body".to_string(),
+            operation: "post".to_string(),
+            body: vec![b'a', b'b']};
+        assert!(validator.validate_request(request).is_ok());
+    }
+
+    #[test]
+    fn validator_can_reject_a_request_with_invalid_utf8_body_if_required() {
+        let validator = make_validator();
+        let request = Request{path: "/required/plain/text/body".to_string(),
+            operation: "post".to_string(),
+            body: vec![b'\xc3', b'\x28']};
         assert_eq!(Err(()), validator.validate_request(request));
     }
 }

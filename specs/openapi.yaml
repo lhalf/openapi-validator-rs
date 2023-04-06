@@ -56,7 +56,18 @@ paths:
         content:
           application/json:
             schema:
-              type: unused
+      responses:
+        200:
+          description: API call successful
+
+  /required/plain/text/body:
+    post:
+      summary: Requires a JSON body
+      requestBody:
+        required: true
+        content:
+          text/plain; charset=utf-8:
+            schema:
       responses:
         200:
           description: API call successful
