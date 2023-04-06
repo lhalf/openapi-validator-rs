@@ -60,12 +60,26 @@ paths:
         200:
           description: API call successful
 
-  /required/plain/text/body:
+  /required/utf8/body:
     post:
       summary: Requires a JSON body
       requestBody:
         required: true
         content:
+          text/plain; charset=utf-8:
+            schema:
+      responses:
+        200:
+          description: API call successful
+
+  /allows/utf8/or/json/body:
+    post:
+      summary: Requires a JSON body
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
           text/plain; charset=utf-8:
             schema:
       responses:
