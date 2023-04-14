@@ -14,7 +14,7 @@ impl Validator {
     fn validate_request(&self, request: Request) -> Result<Request, ()> {
         self.validate_path(request.path())?
             .validate_operation(request.operation())?
-            .validate_body(request.body(), request.get_header("Content-Type"))?;
+            .validate_content_type(request.body(), request.get_header("Content-Type"))?;
         Ok(request)
     }
 
@@ -54,7 +54,7 @@ struct ValidatedOperation<'operation> {
 }
 
 impl<'operation> ValidatedOperation<'operation> {
-    fn validate_body(&self, body: &[u8], content_type: Option<&str>) -> Result<(), ()> {
+    fn validate_content_type(&self, body: &[u8], content_type: Option<&str>) -> Result<(), ()> {
         let body_spec = match self
             .operation_spec
             .request_body
