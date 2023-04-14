@@ -14,7 +14,8 @@ impl Validator {
     fn validate_request(&self, request: Request) -> Result<Request, ()> {
         self.validate_path(request.path())?
             .validate_operation(request.operation())?
-            .validate_content_type(request.body(), request.get_header("Content-Type"))?;
+            .validate_content_type(request.get_header("Content-Type"))?
+            .validate_body(request.body())?;
         Ok(request)
     }
 
@@ -54,7 +55,10 @@ struct ValidatedOperation<'operation> {
 }
 
 impl<'operation> ValidatedOperation<'operation> {
-    fn validate_content_type(&self, body: &[u8], content_type: Option<&str>) -> Result<(), ()> {
+    fn validate_content_type(
+        &self,
+        content_type: Option<&str>,
+    ) -> Result<ValidatedContentType, ()> {
         let body_spec = match self
             .operation_spec
             .request_body
@@ -62,37 +66,52 @@ impl<'operation> ValidatedOperation<'operation> {
             .and_then(openapiv3::ReferenceOr::as_item)
         {
             Some(body_spec) => body_spec,
-            None => return Ok(()),
+            None => return Ok(ValidatedContentType::NoSpecification),
         };
 
-        if body_spec.required && body.is_empty() {
-            return Err(());
-        }
-
-        if !body_spec.required && body.is_empty() {
-            return Ok(());
-        }
-
         let content_type = match content_type {
-            Some(content_type) if !body.is_empty() => content_type,
-            _ => return Err(()),
+            Some(content_type) => content_type,
+            _ => return Ok(ValidatedContentType::EmptyContentType { body_spec }),
         };
 
         if !body_spec.content.contains_key(content_type) {
             return Err(());
         }
 
-        return match content_type {
-            "application/json" => match serde_json::from_slice::<serde_json::Value>(body) {
-                Ok(_) => Ok(()),
-                Err(_) => Err(()),
-            },
-            "text/plain; charset=utf-8" => match std::str::from_utf8(body) {
-                Ok(_) => Ok(()),
-                Err(_) => Err(()),
-            },
+        match content_type {
+            "application/json" => Ok(ValidatedContentType::JSONBody),
+            "text/plain; charset=utf-8" => Ok(ValidatedContentType::PlainUTF8Body),
             _ => Err(()),
-        };
+        }
+    }
+}
+
+enum ValidatedContentType<'body> {
+    NoSpecification,
+    EmptyContentType {
+        body_spec: &'body openapiv3::RequestBody,
+    },
+    JSONBody,
+    PlainUTF8Body,
+}
+
+impl<'body> ValidatedContentType<'body> {
+    fn validate_body(&self, body: &[u8]) -> Result<(), ()> {
+        match self {
+            Self::JSONBody { .. } => match serde_json::from_slice::<serde_json::Value>(body) {
+                Ok(_) => Ok(()),
+                Err(_) => Err(()),
+            },
+            Self::PlainUTF8Body { .. } => match std::str::from_utf8(body) {
+                Ok(_) => Ok(()),
+                Err(_) => Err(()),
+            },
+            Self::EmptyContentType { body_spec } => match !body_spec.required && body.is_empty() {
+                true => Ok(()),
+                false => Err(()),
+            },
+            Self::NoSpecification => Ok(()),
+        }
     }
 }
 
