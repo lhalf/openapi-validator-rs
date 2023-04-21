@@ -211,14 +211,25 @@ mod test {
 
     #[test]
     fn validator_can_accept_a_request_with_put_operation() {
-        let validator = make_validator();
+        let path_spec = indoc!(
+            r#"
+            paths:
+                /allowed/put:
+                    put:
+                      responses:
+                        200:
+                          description: API call successful
+                    "#
+        );
         let request = Request {
-            path: "/multiple/allowed/operations".to_string(),
+            path: "/allowed/put".to_string(),
             operation: "put".to_string(),
             body: vec![],
             headers: HashMap::new(),
         };
-        assert!(validator.validate_request(request).is_ok());
+        assert!(make_validator_from_spec(path_spec)
+            .validate_request(request)
+            .is_ok());
     }
 
     #[test]
