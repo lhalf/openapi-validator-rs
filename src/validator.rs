@@ -234,26 +234,48 @@ mod test {
 
     #[test]
     fn validator_can_accept_a_request_with_post_operation() {
-        let validator = make_validator();
+        let path_spec = indoc!(
+            r#"
+            paths:
+                /allowed/post:
+                    post:
+                      responses:
+                        200:
+                          description: API call successful
+                    "#
+        );
         let request = Request {
-            path: "/multiple/allowed/operations".to_string(),
+            path: "/allowed/post".to_string(),
             operation: "post".to_string(),
             body: vec![],
             headers: HashMap::new(),
         };
-        assert!(validator.validate_request(request).is_ok());
+        assert!(make_validator_from_spec(path_spec)
+            .validate_request(request)
+            .is_ok());
     }
 
     #[test]
     fn validator_can_accept_a_request_with_delete_operation() {
-        let validator = make_validator();
+        let path_spec = indoc!(
+            r#"
+            paths:
+                /allowed/delete:
+                    delete:
+                      responses:
+                        200:
+                          description: API call successful
+                    "#
+        );
         let request = Request {
-            path: "/multiple/allowed/operations".to_string(),
+            path: "/allowed/delete".to_string(),
             operation: "delete".to_string(),
             body: vec![],
             headers: HashMap::new(),
         };
-        assert!(validator.validate_request(request).is_ok());
+        assert!(make_validator_from_spec(path_spec)
+            .validate_request(request)
+            .is_ok());
     }
 
     #[test]
