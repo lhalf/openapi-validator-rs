@@ -144,7 +144,12 @@ impl Request {
 #[cfg(test)]
 mod test {
     use crate::validator::{Request, Validator};
+    use indoc::indoc;
     use std::collections::HashMap;
+
+    fn make_validator_from_spec(openapi: &str) -> Validator {
+        Validator::new(serde_yaml::from_str(openapi).unwrap())
+    }
 
     fn make_validator() -> Validator {
         let spec: String = std::fs::read_to_string("./specs/openapi.yaml").unwrap();
@@ -171,14 +176,31 @@ mod test {
 
     #[test]
     fn validator_can_reject_a_request_with_invalid_path() {
-        let validator = make_validator();
+        let openapi = indoc!(
+            r#"
+            openapi: 3.0.0
+            info:
+              description: API to handle generic two-way HTTP requests
+              version: "1.0.0"
+              title: Swagger ReST Article
+            paths:
+              /ping:
+                get:
+                  summary: Ping
+                  responses:
+                    200:
+                      description: API call successful"#
+        );
         let request = Request {
-            path: "/not/ping".to_string(),
+            path: "/invalid/path".to_string(),
             operation: "get".to_string(),
             body: vec![],
             headers: HashMap::new(),
         };
-        assert_eq!(Err(()), validator.validate_request(request));
+        assert_eq!(
+            Err(()),
+            make_validator_from_spec(openapi).validate_request(request)
+        );
     }
 
     #[test]
