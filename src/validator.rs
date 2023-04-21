@@ -147,8 +147,19 @@ mod test {
     use indoc::indoc;
     use std::collections::HashMap;
 
-    fn make_validator_from_spec(openapi: &str) -> Validator {
-        Validator::new(serde_yaml::from_str(openapi).unwrap())
+    fn make_validator_from_spec(path_spec: &str) -> Validator {
+        let openapi = indoc!(
+            r#"
+            openapi: 3.0.0
+            info:
+                description: API to handle generic two-way HTTP requests
+                version: "1.0.0"
+                title: Swagger ReST Article
+            "#
+        )
+        .to_string()
+            + path_spec;
+        Validator::new(serde_yaml::from_str(&openapi).unwrap())
     }
 
     fn make_validator() -> Validator {
@@ -176,13 +187,8 @@ mod test {
 
     #[test]
     fn validator_can_reject_a_request_with_invalid_path() {
-        let openapi = indoc!(
+        let path_spec = indoc!(
             r#"
-            openapi: 3.0.0
-            info:
-              description: API to handle generic two-way HTTP requests
-              version: "1.0.0"
-              title: Swagger ReST Article
             paths:
               /ping:
                 get:
@@ -199,7 +205,7 @@ mod test {
         };
         assert_eq!(
             Err(()),
-            make_validator_from_spec(openapi).validate_request(request)
+            make_validator_from_spec(path_spec).validate_request(request)
         );
     }
 
