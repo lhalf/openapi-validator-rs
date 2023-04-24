@@ -359,7 +359,19 @@ mod test {
     #[test]
     fn validator_can_reject_a_request_where_body_is_optional_but_specified_content_type_is_not_in_spec(
     ) {
-        let validator = make_validator();
+        let path_spec = indoc!(
+            r#"
+            paths:
+                /not/required/body:
+                  post:
+                    summary: Requires a body
+                    requestBody:
+                      required: false
+                    responses:
+                      200:
+                        description: API call successful
+            "#
+        );
         let request = Request {
             path: "/not/required/body".to_string(),
             operation: "post".to_string(),
@@ -369,7 +381,7 @@ mod test {
                 "text/plain; charset=utf-8".to_string(),
             )]),
         };
-        assert_eq!(Err(()), validator.validate_request(request));
+        assert_eq!(Err(()), make_validator_from_spec(path_spec).validate_request(request));
     }
 
     #[test]
