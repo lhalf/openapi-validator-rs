@@ -332,14 +332,28 @@ mod test {
 
     #[test]
     fn validator_can_accept_a_request_with_no_body_if_not_required() {
-        let validator = make_validator();
+        let path_spec = indoc!(
+            r#"
+            paths:
+                /not/required/body:
+                  post:
+                    summary: Requires a body
+                    requestBody:
+                      required: false
+                    responses:
+                      200:
+                        description: API call successful
+            "#
+        );
         let request = Request {
             path: "/not/required/body".to_string(),
             operation: "post".to_string(),
             body: vec![],
             headers: HashMap::new(),
         };
-        assert!(validator.validate_request(request).is_ok());
+        assert!(make_validator_from_spec(path_spec)
+            .validate_request(request)
+            .is_ok());
     }
 
     #[test]
