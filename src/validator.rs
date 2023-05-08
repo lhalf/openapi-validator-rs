@@ -413,14 +413,29 @@ mod test {
 
     #[test]
     fn validator_can_reject_a_request_with_invalid_json_body_if_required() {
-        let validator = make_validator();
+        let path_spec = indoc!(
+            r#"
+            paths:
+                /required/json/body:
+                  post:
+                    summary: Requires a body
+                    requestBody:
+                      required: true
+                      content:
+                        application/json:
+                            schema:
+                    responses:
+                      200:
+                        description: API call successful
+            "#
+        );
         let request = Request {
             path: "/required/json/body".to_string(),
             operation: "post".to_string(),
             body: vec![b'b', b'a', b'b', b'e'],
             headers: HashMap::from([("Content-Type".to_string(), "application/json".to_string())]),
         };
-        assert_eq!(Err(()), validator.validate_request(request));
+        assert_eq!(Err(()), make_validator_from_spec(path_spec).validate_request(request));
     }
 
     #[test]
