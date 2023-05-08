@@ -440,7 +440,22 @@ mod test {
 
     #[test]
     fn validator_can_accept_a_request_with_valid_utf8_body_if_required() {
-        let validator = make_validator();
+        let path_spec = indoc!(
+            r#"
+            paths:
+                /required/utf8/body:
+                  post:
+                    summary: Requires a JSON body
+                    requestBody:
+                      required: true
+                      content:
+                        text/plain; charset=utf-8:
+                            schema:
+                    responses:
+                      200:
+                        description: API call successful
+            "#
+        );
         let request = Request {
             path: "/required/utf8/body".to_string(),
             operation: "post".to_string(),
@@ -450,12 +465,27 @@ mod test {
                 "text/plain; charset=utf-8".to_string(),
             )]),
         };
-        assert!(validator.validate_request(request).is_ok());
+        assert!(make_validator_from_spec(path_spec).validate_request(request).is_ok());
     }
 
     #[test]
     fn validator_can_reject_a_request_with_invalid_utf8_body_if_required() {
-        let validator = make_validator();
+        let path_spec = indoc!(
+            r#"
+            paths:
+                /required/utf8/body:
+                  post:
+                    summary: Requires a JSON body
+                    requestBody:
+                      required: true
+                      content:
+                        text/plain; charset=utf-8:
+                            schema:
+                    responses:
+                      200:
+                        description: API call successful
+            "#
+        );
         let request = Request {
             path: "/required/utf8/body".to_string(),
             operation: "post".to_string(),
@@ -465,24 +495,58 @@ mod test {
                 "text/plain; charset=utf-8".to_string(),
             )]),
         };
-        assert_eq!(Err(()), validator.validate_request(request));
+        assert_eq!(Err(()), make_validator_from_spec(path_spec).validate_request(request));
     }
 
     #[test]
     fn validator_can_select_which_content_to_validate_given_content_type_header_invalid_case() {
-        let validator = make_validator();
+        let path_spec = indoc!(
+            r#"
+            paths:
+                /allows/utf8/or/json/body:
+                  post:
+                    summary: Requires a JSON body
+                    requestBody:
+                      required: true
+                      content:
+                        application/json:
+                            schema:
+                        text/plain; charset=utf-8:
+                            schema:
+                    responses:
+                      200:
+                        description: API call successful
+            "#
+        );
         let request = Request {
             path: "/allows/utf8/or/json/body".to_string(),
             operation: "post".to_string(),
             body: vec![b'a', b'b'],
             headers: HashMap::from([("Content-Type".to_string(), "application/json".to_string())]),
         };
-        assert_eq!(Err(()), validator.validate_request(request));
+        assert_eq!(Err(()), make_validator_from_spec(path_spec).validate_request(request));
     }
 
     #[test]
     fn validator_can_select_which_content_to_validate_given_content_type_header_valid_case() {
-        let validator = make_validator();
+        let path_spec = indoc!(
+            r#"
+            paths:
+                /allows/utf8/or/json/body:
+                  post:
+                    summary: Requires a JSON body
+                    requestBody:
+                      required: true
+                      content:
+                        application/json:
+                            schema:
+                        text/plain; charset=utf-8:
+                            schema:
+                    responses:
+                      200:
+                        description: API call successful
+            "#
+        );
         let request = Request {
             path: "/allows/utf8/or/json/body".to_string(),
             operation: "post".to_string(),
@@ -492,6 +556,6 @@ mod test {
                 "text/plain; charset=utf-8".to_string(),
             )]),
         };
-        assert!(validator.validate_request(request).is_ok());
+        assert!(make_validator_from_spec(path_spec).validate_request(request).is_ok());
     }
 }
