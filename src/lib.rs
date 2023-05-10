@@ -1,1 +1,2 @@
+mod jsonschema;
 mod validator;
