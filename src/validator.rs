@@ -195,7 +195,8 @@ mod test {
                   summary: Ping
                   responses:
                     200:
-                      description: API call successful"#
+                      description: API call successful
+            "#
         );
         let request = Request {
             path: "/invalid/path".to_string(),
@@ -214,12 +215,12 @@ mod test {
         let path_spec = indoc!(
             r#"
             paths:
-                /allowed/put:
-                    put:
-                      responses:
-                        200:
-                          description: API call successful
-                    "#
+              /allowed/put:
+                put:
+                  responses:
+                    200:
+                      description: API call successful
+            "#
         );
         let request = Request {
             path: "/allowed/put".to_string(),
@@ -237,12 +238,12 @@ mod test {
         let path_spec = indoc!(
             r#"
             paths:
-                /allowed/post:
-                    post:
-                      responses:
-                        200:
-                          description: API call successful
-                    "#
+              /allowed/post:
+                post:
+                  responses:
+                    200:
+                      description: API call successful
+            "#
         );
         let request = Request {
             path: "/allowed/post".to_string(),
@@ -260,12 +261,12 @@ mod test {
         let path_spec = indoc!(
             r#"
             paths:
-                /allowed/delete:
-                    delete:
-                      responses:
-                        200:
-                          description: API call successful
-                    "#
+              /allowed/delete:
+                delete:
+                  responses:
+                    200:
+                      description: API call successful
+            "#
         );
         let request = Request {
             path: "/allowed/delete".to_string(),
@@ -299,7 +300,10 @@ mod test {
             body: vec![],
             headers: HashMap::new(),
         };
-        assert_eq!(Err(()), make_validator_from_spec(path_spec).validate_request(request));
+        assert_eq!(
+            Err(()),
+            make_validator_from_spec(path_spec).validate_request(request)
+        );
     }
 
     #[test]
@@ -321,13 +325,16 @@ mod test {
         let request = Request {
             path: "/required/body".to_string(),
             operation: "post".to_string(),
-            body: vec![b'b', b'a', b'b', b'e'],
+            body: "babe".as_bytes().to_vec(),
             headers: HashMap::from([(
                 "Content-Type".to_string(),
                 "text/plain; charset=utf-8".to_string(),
             )]),
         };
-        assert_eq!(Err(()), make_validator_from_spec(path_spec).validate_request(request));
+        assert_eq!(
+            Err(()),
+            make_validator_from_spec(path_spec).validate_request(request)
+        );
     }
 
     #[test]
@@ -335,14 +342,14 @@ mod test {
         let path_spec = indoc!(
             r#"
             paths:
-                /not/required/body:
-                  post:
-                    summary: Requires a body
-                    requestBody:
-                      required: false
-                    responses:
-                      200:
-                        description: API call successful
+              /not/required/body:
+                post:
+                  summary: Requires a body
+                  requestBody:
+                    required: false
+                  responses:
+                    200:
+                      description: API call successful
             "#
         );
         let request = Request {
@@ -362,26 +369,29 @@ mod test {
         let path_spec = indoc!(
             r#"
             paths:
-                /not/required/body:
-                  post:
-                    summary: Requires a body
-                    requestBody:
-                      required: false
-                    responses:
-                      200:
-                        description: API call successful
+              /not/required/body:
+                post:
+                  summary: Requires a body
+                  requestBody:
+                    required: false
+                  responses:
+                    200:
+                      description: API call successful
             "#
         );
         let request = Request {
             path: "/not/required/body".to_string(),
             operation: "post".to_string(),
-            body: vec![b'b', b'a', b'b', b'e'],
+            body: "babe".as_bytes().to_vec(),
             headers: HashMap::from([(
                 "Content-Type".to_string(),
                 "text/plain; charset=utf-8".to_string(),
             )]),
         };
-        assert_eq!(Err(()), make_validator_from_spec(path_spec).validate_request(request));
+        assert_eq!(
+            Err(()),
+            make_validator_from_spec(path_spec).validate_request(request)
+        );
     }
 
     #[test]
@@ -389,26 +399,28 @@ mod test {
         let path_spec = indoc!(
             r#"
             paths:
-                /required/json/body:
-                  post:
-                    summary: Requires a body
-                    requestBody:
-                      required: true
-                      content:
-                        application/json:
-                            schema:
-                    responses:
-                      200:
-                        description: API call successful
+              /required/json/body:
+                post:
+                  summary: Requires a body
+                  requestBody:
+                    required: true
+                    content:
+                      application/json:
+                        schema:
+                  responses:
+                    200:
+                      description: API call successful
             "#
         );
         let request = Request {
             path: "/required/json/body".to_string(),
             operation: "post".to_string(),
-            body: vec![b'{', b'}'],
+            body: "{}".as_bytes().to_vec(),
             headers: HashMap::from([("Content-Type".to_string(), "application/json".to_string())]),
         };
-        assert!(make_validator_from_spec(path_spec).validate_request(request).is_ok());
+        assert!(make_validator_from_spec(path_spec)
+            .validate_request(request)
+            .is_ok());
     }
 
     #[test]
@@ -416,26 +428,29 @@ mod test {
         let path_spec = indoc!(
             r#"
             paths:
-                /required/json/body:
-                  post:
-                    summary: Requires a body
-                    requestBody:
-                      required: true
-                      content:
-                        application/json:
-                            schema:
-                    responses:
-                      200:
-                        description: API call successful
+              /required/json/body:
+                post:
+                  summary: Requires a body
+                  requestBody:
+                    required: true
+                    content:
+                      application/json:
+                        schema:
+                  responses:
+                    200:
+                      description: API call successful
             "#
         );
         let request = Request {
             path: "/required/json/body".to_string(),
             operation: "post".to_string(),
-            body: vec![b'b', b'a', b'b', b'e'],
+            body: "babe".as_bytes().to_vec(),
             headers: HashMap::from([("Content-Type".to_string(), "application/json".to_string())]),
         };
-        assert_eq!(Err(()), make_validator_from_spec(path_spec).validate_request(request));
+        assert_eq!(
+            Err(()),
+            make_validator_from_spec(path_spec).validate_request(request)
+        );
     }
 
     #[test]
@@ -443,29 +458,31 @@ mod test {
         let path_spec = indoc!(
             r#"
             paths:
-                /required/utf8/body:
-                  post:
-                    summary: Requires a JSON body
-                    requestBody:
-                      required: true
-                      content:
-                        text/plain; charset=utf-8:
-                            schema:
-                    responses:
-                      200:
-                        description: API call successful
+              /required/utf8/body:
+                post:
+                  summary: Requires a JSON body
+                  requestBody:
+                    required: true
+                    content:
+                      text/plain; charset=utf-8:
+                        schema:
+                  responses:
+                    200:
+                      description: API call successful
             "#
         );
         let request = Request {
             path: "/required/utf8/body".to_string(),
             operation: "post".to_string(),
-            body: vec![b'a', b'b'],
+            body: "ab".as_bytes().to_vec(),
             headers: HashMap::from([(
                 "Content-Type".to_string(),
                 "text/plain; charset=utf-8".to_string(),
             )]),
         };
-        assert!(make_validator_from_spec(path_spec).validate_request(request).is_ok());
+        assert!(make_validator_from_spec(path_spec)
+            .validate_request(request)
+            .is_ok());
     }
 
     #[test]
@@ -473,17 +490,17 @@ mod test {
         let path_spec = indoc!(
             r#"
             paths:
-                /required/utf8/body:
-                  post:
-                    summary: Requires a JSON body
-                    requestBody:
-                      required: true
-                      content:
-                        text/plain; charset=utf-8:
-                            schema:
-                    responses:
-                      200:
-                        description: API call successful
+              /required/utf8/body:
+                post:
+                  summary: Requires a JSON body
+                  requestBody:
+                    required: true
+                    content:
+                      text/plain; charset=utf-8:
+                        schema:
+                  responses:
+                    200:
+                      description: API call successful
             "#
         );
         let request = Request {
@@ -495,7 +512,10 @@ mod test {
                 "text/plain; charset=utf-8".to_string(),
             )]),
         };
-        assert_eq!(Err(()), make_validator_from_spec(path_spec).validate_request(request));
+        assert_eq!(
+            Err(()),
+            make_validator_from_spec(path_spec).validate_request(request)
+        );
     }
 
     #[test]
@@ -503,28 +523,31 @@ mod test {
         let path_spec = indoc!(
             r#"
             paths:
-                /allows/utf8/or/json/body:
-                  post:
-                    summary: Requires a JSON body
-                    requestBody:
-                      required: true
-                      content:
-                        application/json:
-                            schema:
-                        text/plain; charset=utf-8:
-                            schema:
-                    responses:
-                      200:
-                        description: API call successful
+              /allows/utf8/or/json/body:
+                post:
+                  summary: Requires a JSON body
+                  requestBody:
+                    required: true
+                    content:
+                      application/json:
+                        schema:
+                      text/plain; charset=utf-8:
+                        schema:
+                  responses:
+                    200:
+                      description: API call successful
             "#
         );
         let request = Request {
             path: "/allows/utf8/or/json/body".to_string(),
             operation: "post".to_string(),
-            body: vec![b'a', b'b'],
+            body: "ab".as_bytes().to_vec(),
             headers: HashMap::from([("Content-Type".to_string(), "application/json".to_string())]),
         };
-        assert_eq!(Err(()), make_validator_from_spec(path_spec).validate_request(request));
+        assert_eq!(
+            Err(()),
+            make_validator_from_spec(path_spec).validate_request(request)
+        );
     }
 
     #[test]
@@ -532,30 +555,32 @@ mod test {
         let path_spec = indoc!(
             r#"
             paths:
-                /allows/utf8/or/json/body:
-                  post:
-                    summary: Requires a JSON body
-                    requestBody:
-                      required: true
-                      content:
-                        application/json:
-                            schema:
-                        text/plain; charset=utf-8:
-                            schema:
-                    responses:
-                      200:
-                        description: API call successful
+              /allows/utf8/or/json/body:
+                post:
+                  summary: Requires a JSON body
+                  requestBody:
+                    required: true
+                    content:
+                      application/json:
+                        schema:
+                      text/plain; charset=utf-8:
+                        schema:
+                  responses:
+                    200:
+                      description: API call successful
             "#
         );
         let request = Request {
             path: "/allows/utf8/or/json/body".to_string(),
             operation: "post".to_string(),
-            body: vec![b'a', b'b'],
+            body: "ab".as_bytes().to_vec(),
             headers: HashMap::from([(
                 "Content-Type".to_string(),
                 "text/plain; charset=utf-8".to_string(),
             )]),
         };
-        assert!(make_validator_from_spec(path_spec).validate_request(request).is_ok());
+        assert!(make_validator_from_spec(path_spec)
+            .validate_request(request)
+            .is_ok());
     }
 }
