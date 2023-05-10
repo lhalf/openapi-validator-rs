@@ -33,7 +33,7 @@ impl JSONSchema for openapiv3::StringType {
         if let openapiv3::VariantOrUnknownOrEmpty::Item(format) = &self.format {
             match format {
                 openapiv3::StringFormat::DateTime => {
-                    json.insert("format".to_string(), serde_json::Value::from("date-time"));
+                    json.insert("format".to_string(), "date-time".into());
                 }
                 _ => todo!(),
             }
