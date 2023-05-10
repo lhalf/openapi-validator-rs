@@ -30,6 +30,14 @@ impl JSONSchema for openapiv3::StringType {
         if let Some(pattern) = &self.pattern {
             json.insert("pattern".to_string(), pattern.to_string().into());
         }
+        if let openapiv3::VariantOrUnknownOrEmpty::Item(format) = &self.format {
+            match format {
+                openapiv3::StringFormat::DateTime => {
+                    json.insert("format".to_string(), serde_json::Value::from("date-time"));
+                }
+                _ => todo!(),
+            }
+        }
         json.into()
     }
 }
@@ -120,6 +128,26 @@ mod test {
             }
             .to_json_schema(),
             json!({"type": "string", "pattern": "^(\\([0-9]{3}\\))?[0-9]{3}-[0-9]{4}$"})
+        )
+    }
+
+    #[test]
+    fn format_string() {
+        assert_eq!(
+            openapiv3::Schema {
+                schema_data: Default::default(),
+                schema_kind: openapiv3::SchemaKind::Type(Type::String(StringType {
+                    format: openapiv3::VariantOrUnknownOrEmpty::Item(
+                        openapiv3::StringFormat::DateTime
+                    ),
+                    pattern: None,
+                    enumeration: vec![],
+                    min_length: None,
+                    max_length: None,
+                }))
+            }
+            .to_json_schema(),
+            json!({"type": "string", "format": "date-time"})
         )
     }
 }
