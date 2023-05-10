@@ -27,6 +27,9 @@ impl JSONSchema for openapiv3::StringType {
         if let Some(max_length) = self.max_length {
             json.insert("maxLength".to_string(), max_length.into());
         }
+        if let Some(pattern) = &self.pattern {
+            json.insert("pattern".to_string(), pattern.to_string().into());
+        }
         json.into()
     }
 }
@@ -99,6 +102,24 @@ mod test {
             }
             .to_json_schema(),
             json!({"type": "string", "minLength": 5, "maxLength": 10})
+        )
+    }
+
+    #[test]
+    fn pattern_string() {
+        assert_eq!(
+            openapiv3::Schema {
+                schema_data: Default::default(),
+                schema_kind: openapiv3::SchemaKind::Type(Type::String(StringType {
+                    format: Default::default(),
+                    pattern: Some("^(\\([0-9]{3}\\))?[0-9]{3}-[0-9]{4}$".to_string()),
+                    enumeration: vec![],
+                    min_length: None,
+                    max_length: None,
+                }))
+            }
+            .to_json_schema(),
+            json!({"type": "string", "pattern": "^(\\([0-9]{3}\\))?[0-9]{3}-[0-9]{4}$"})
         )
     }
 }
