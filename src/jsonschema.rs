@@ -12,6 +12,7 @@ impl JSONSchema for openapiv3::Schema {
             openapiv3::SchemaKind::Type(Type::String(string_schema)) => {
                 string_schema.to_json_schema()
             }
+            openapiv3::SchemaKind::Type(Type::Array(array_schema)) => array_schema.to_json_schema(),
             _ => todo!(),
         }
     }
@@ -41,6 +42,14 @@ impl JSONSchema for openapiv3::StringType {
                 _ => (),
             }
         }
+        json.into()
+    }
+}
+
+impl JSONSchema for openapiv3::ArrayType {
+    fn to_json_schema(&self) -> serde_json::Value {
+        let mut json = serde_json::Map::new();
+        json.insert("type".to_string(), serde_json::Value::from("array"));
         json.into()
     }
 }
@@ -174,6 +183,29 @@ mod test_string {
             }
             .to_json_schema(),
             json!({"type": "string", "format": "date"})
+        )
+    }
+}
+
+#[cfg(test)]
+mod test_array {
+    use super::*;
+    use openapiv3::ArrayType;
+
+    #[test]
+    fn basic() {
+        assert_eq!(
+            openapiv3::Schema {
+                schema_data: Default::default(),
+                schema_kind: openapiv3::SchemaKind::Type(Type::Array(ArrayType {
+                    items: None,
+                    min_items: None,
+                    max_items: None,
+                    unique_items: false,
+                }))
+            }
+            .to_json_schema(),
+            json!({"type": "array"})
         )
     }
 }
