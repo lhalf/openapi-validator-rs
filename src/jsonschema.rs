@@ -49,6 +49,14 @@ impl JSONSchema for openapiv3::Schema {
                 json.insert("anyOf".to_string(), schemas.into());
                 json.into()
             }
+            openapiv3::SchemaKind::Not { not } => {
+                let mut json = serde_json::Map::new();
+                json.insert(
+                    "not".to_string(),
+                    not.to_owned().into_item().unwrap().to_json_schema(),
+                );
+                json.into()
+            }
             _ => todo!(),
         }
     }
@@ -1234,6 +1242,29 @@ mod test_any_of {
             }
             .to_json_schema(),
             json!({"anyOf": [{"type": "boolean"}, {"type": "integer"}]})
+        )
+    }
+}
+
+#[cfg(test)]
+mod test_not {
+    use super::*;
+    use openapiv3::ReferenceOr;
+
+    #[test]
+    fn basic() {
+        assert_eq!(
+            openapiv3::Schema {
+                schema_data: Default::default(),
+                schema_kind: openapiv3::SchemaKind::Not {
+                    not: Box::from(ReferenceOr::Item(openapiv3::Schema {
+                        schema_data: Default::default(),
+                        schema_kind: openapiv3::SchemaKind::Type(Type::Boolean {})
+                    }))
+                }
+            }
+            .to_json_schema(),
+            json!({"not": {"type": "boolean"}})
         )
     }
 }
