@@ -52,23 +52,6 @@ impl JSONSchema for openapiv3::StringType {
     }
 }
 
-impl JSONSchema for openapiv3::ArrayType {
-    fn to_json_schema(&self) -> serde_json::Value {
-        let mut json = serde_json::Map::new();
-        json.insert("type".to_string(), serde_json::Value::from("array"));
-        if let Some(min_items) = self.min_items {
-            json.insert("minItems".to_string(), min_items.into());
-        }
-        if let Some(max_items) = self.max_items {
-            json.insert("maxItems".to_string(), max_items.into());
-        }
-        if self.unique_items {
-            json.insert("uniqueItems".to_string(), self.unique_items.into());
-        }
-        json.into()
-    }
-}
-
 impl JSONSchema for openapiv3::NumberType {
     fn to_json_schema(&self) -> serde_json::Value {
         let mut json = serde_json::Map::new();
@@ -122,6 +105,31 @@ impl JSONSchema for openapiv3::IntegerType {
         }
         if let Some(multiple_of) = self.multiple_of {
             json.insert("multipleOf".to_string(), multiple_of.into());
+        }
+        json.into()
+    }
+}
+
+impl JSONSchema for openapiv3::ArrayType {
+    fn to_json_schema(&self) -> serde_json::Value {
+        let mut json = serde_json::Map::new();
+        json.insert("type".to_string(), serde_json::Value::from("array"));
+        if let Some(min_items) = self.min_items {
+            json.insert("minItems".to_string(), min_items.into());
+        }
+        if let Some(max_items) = self.max_items {
+            json.insert("maxItems".to_string(), max_items.into());
+        }
+        if self.unique_items {
+            json.insert("uniqueItems".to_string(), self.unique_items.into());
+        }
+        if let Some(items) = &self.items {
+            match &items.as_item().unwrap().schema_kind {
+                openapiv3::SchemaKind::Type(Type::Number(number_schema)) => {
+                    json.insert("items".to_string(), number_schema.to_json_schema());
+                }
+                _ => (),
+            }
         }
         json.into()
     }
@@ -475,7 +483,7 @@ mod test_integer {
 #[cfg(test)]
 mod test_array {
     use super::*;
-    use openapiv3::ArrayType;
+    use openapiv3::{ArrayType, ReferenceOr};
 
     #[test]
     fn basic() {
@@ -542,6 +550,35 @@ mod test_array {
             }
             .to_json_schema(),
             json!({"type": "array", "uniqueItems": true})
+        )
+    }
+
+    #[test]
+    fn basic_items() {
+        let number_schema = openapiv3::Schema {
+            schema_data: Default::default(),
+            schema_kind: openapiv3::SchemaKind::Type(Type::Number(openapiv3::NumberType {
+                format: Default::default(),
+                multiple_of: None,
+                exclusive_minimum: false,
+                exclusive_maximum: false,
+                minimum: None,
+                maximum: None,
+                enumeration: vec![],
+            })),
+        };
+        assert_eq!(
+            openapiv3::Schema {
+                schema_data: Default::default(),
+                schema_kind: openapiv3::SchemaKind::Type(Type::Array(ArrayType {
+                    items: Some(ReferenceOr::Item(Box::from(number_schema))),
+                    min_items: None,
+                    max_items: None,
+                    unique_items: false,
+                }))
+            }
+            .to_json_schema(),
+            json!({"type": "array", "items": {"type": "number"}})
         )
     }
 }
