@@ -31,6 +31,24 @@ impl JSONSchema for openapiv3::Schema {
                 json.insert("oneOf".to_string(), schemas.into());
                 json.into()
             }
+            openapiv3::SchemaKind::AllOf { all_of } => {
+                let mut json = serde_json::Map::new();
+                let schemas: serde_json::Value = all_of
+                    .iter()
+                    .map(|schema| schema.to_owned().into_item().unwrap().to_json_schema())
+                    .collect();
+                json.insert("allOf".to_string(), schemas.into());
+                json.into()
+            }
+            openapiv3::SchemaKind::AnyOf { any_of } => {
+                let mut json = serde_json::Map::new();
+                let schemas: serde_json::Value = any_of
+                    .iter()
+                    .map(|schema| schema.to_owned().into_item().unwrap().to_json_schema())
+                    .collect();
+                json.insert("anyOf".to_string(), schemas.into());
+                json.into()
+            }
             _ => todo!(),
         }
     }
@@ -1104,6 +1122,118 @@ mod test_one_of {
             }
             .to_json_schema(),
             json!({"oneOf": [{"type": "boolean"}, {"type": "integer"}]})
+        )
+    }
+}
+
+#[cfg(test)]
+mod test_all_of {
+    use super::*;
+    use openapiv3::{IntegerType, ReferenceOr};
+
+    #[test]
+    fn basic() {
+        assert_eq!(
+            openapiv3::Schema {
+                schema_data: Default::default(),
+                schema_kind: openapiv3::SchemaKind::AllOf {
+                    all_of: vec![ReferenceOr::Item(openapiv3::Schema {
+                        schema_data: Default::default(),
+                        schema_kind: openapiv3::SchemaKind::Type(Type::Boolean {})
+                    })]
+                }
+            }
+            .to_json_schema(),
+            json!({"allOf": [{"type": "boolean"}]})
+        )
+    }
+
+    #[test]
+    fn multiple() {
+        let integer_schema = openapiv3::Schema {
+            schema_data: Default::default(),
+            schema_kind: openapiv3::SchemaKind::Type(Type::Integer(IntegerType {
+                format: Default::default(),
+                multiple_of: None,
+                exclusive_minimum: false,
+                exclusive_maximum: false,
+                minimum: None,
+                maximum: None,
+                enumeration: vec![],
+            })),
+        };
+        let boolean_schema = openapiv3::Schema {
+            schema_data: Default::default(),
+            schema_kind: openapiv3::SchemaKind::Type(Type::Boolean {}),
+        };
+        assert_eq!(
+            openapiv3::Schema {
+                schema_data: Default::default(),
+                schema_kind: openapiv3::SchemaKind::AllOf {
+                    all_of: vec![
+                        ReferenceOr::Item(boolean_schema),
+                        ReferenceOr::Item(integer_schema)
+                    ]
+                }
+            }
+            .to_json_schema(),
+            json!({"allOf": [{"type": "boolean"}, {"type": "integer"}]})
+        )
+    }
+}
+
+#[cfg(test)]
+mod test_any_of {
+    use super::*;
+    use openapiv3::{IntegerType, ReferenceOr};
+
+    #[test]
+    fn basic() {
+        assert_eq!(
+            openapiv3::Schema {
+                schema_data: Default::default(),
+                schema_kind: openapiv3::SchemaKind::AnyOf {
+                    any_of: vec![ReferenceOr::Item(openapiv3::Schema {
+                        schema_data: Default::default(),
+                        schema_kind: openapiv3::SchemaKind::Type(Type::Boolean {})
+                    })]
+                }
+            }
+            .to_json_schema(),
+            json!({"anyOf": [{"type": "boolean"}]})
+        )
+    }
+
+    #[test]
+    fn multiple() {
+        let integer_schema = openapiv3::Schema {
+            schema_data: Default::default(),
+            schema_kind: openapiv3::SchemaKind::Type(Type::Integer(IntegerType {
+                format: Default::default(),
+                multiple_of: None,
+                exclusive_minimum: false,
+                exclusive_maximum: false,
+                minimum: None,
+                maximum: None,
+                enumeration: vec![],
+            })),
+        };
+        let boolean_schema = openapiv3::Schema {
+            schema_data: Default::default(),
+            schema_kind: openapiv3::SchemaKind::Type(Type::Boolean {}),
+        };
+        assert_eq!(
+            openapiv3::Schema {
+                schema_data: Default::default(),
+                schema_kind: openapiv3::SchemaKind::AnyOf {
+                    any_of: vec![
+                        ReferenceOr::Item(boolean_schema),
+                        ReferenceOr::Item(integer_schema)
+                    ]
+                }
+            }
+            .to_json_schema(),
+            json!({"anyOf": [{"type": "boolean"}, {"type": "integer"}]})
         )
     }
 }
