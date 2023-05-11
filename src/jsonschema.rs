@@ -125,8 +125,20 @@ impl JSONSchema for openapiv3::ArrayType {
         }
         if let Some(items) = &self.items {
             match &items.as_item().unwrap().schema_kind {
+                openapiv3::SchemaKind::Type(Type::Boolean {}) => {
+                    json.insert("items".to_string(), json!({"type": "boolean"}));
+                }
                 openapiv3::SchemaKind::Type(Type::Number(number_schema)) => {
                     json.insert("items".to_string(), number_schema.to_json_schema());
+                }
+                openapiv3::SchemaKind::Type(Type::Integer(integer_schema)) => {
+                    json.insert("items".to_string(), integer_schema.to_json_schema());
+                }
+                openapiv3::SchemaKind::Type(Type::String(string_schema)) => {
+                    json.insert("items".to_string(), string_schema.to_json_schema());
+                }
+                openapiv3::SchemaKind::Type(Type::Array(array_schema)) => {
+                    json.insert("items".to_string(), array_schema.to_json_schema());
                 }
                 _ => (),
             }
@@ -483,7 +495,7 @@ mod test_integer {
 #[cfg(test)]
 mod test_array {
     use super::*;
-    use openapiv3::{ArrayType, ReferenceOr};
+    use openapiv3::{ArrayType, IntegerType, NumberType, ReferenceOr, StringType};
 
     #[test]
     fn basic() {
@@ -554,10 +566,10 @@ mod test_array {
     }
 
     #[test]
-    fn basic_items() {
+    fn number_items() {
         let number_schema = openapiv3::Schema {
             schema_data: Default::default(),
-            schema_kind: openapiv3::SchemaKind::Type(Type::Number(openapiv3::NumberType {
+            schema_kind: openapiv3::SchemaKind::Type(Type::Number(NumberType {
                 format: Default::default(),
                 multiple_of: None,
                 exclusive_minimum: false,
@@ -579,6 +591,109 @@ mod test_array {
             }
             .to_json_schema(),
             json!({"type": "array", "items": {"type": "number"}})
+        )
+    }
+
+    #[test]
+    fn integer_items() {
+        let integer_schema = openapiv3::Schema {
+            schema_data: Default::default(),
+            schema_kind: openapiv3::SchemaKind::Type(Type::Integer(IntegerType {
+                format: Default::default(),
+                multiple_of: None,
+                exclusive_minimum: false,
+                exclusive_maximum: false,
+                minimum: None,
+                maximum: None,
+                enumeration: vec![],
+            })),
+        };
+        assert_eq!(
+            openapiv3::Schema {
+                schema_data: Default::default(),
+                schema_kind: openapiv3::SchemaKind::Type(Type::Array(ArrayType {
+                    items: Some(ReferenceOr::Item(Box::from(integer_schema))),
+                    min_items: None,
+                    max_items: None,
+                    unique_items: false,
+                }))
+            }
+            .to_json_schema(),
+            json!({"type": "array", "items": {"type": "integer"}})
+        )
+    }
+
+    #[test]
+    fn string_items() {
+        let string_schema = openapiv3::Schema {
+            schema_data: Default::default(),
+            schema_kind: openapiv3::SchemaKind::Type(Type::String(StringType {
+                format: Default::default(),
+                pattern: None,
+                enumeration: vec![],
+                min_length: None,
+                max_length: None,
+            })),
+        };
+        assert_eq!(
+            openapiv3::Schema {
+                schema_data: Default::default(),
+                schema_kind: openapiv3::SchemaKind::Type(Type::Array(ArrayType {
+                    items: Some(ReferenceOr::Item(Box::from(string_schema))),
+                    min_items: None,
+                    max_items: None,
+                    unique_items: false,
+                }))
+            }
+            .to_json_schema(),
+            json!({"type": "array", "items": {"type": "string"}})
+        )
+    }
+
+    #[test]
+    fn boolean_items() {
+        let boolean_schema = openapiv3::Schema {
+            schema_data: Default::default(),
+            schema_kind: openapiv3::SchemaKind::Type(Type::Boolean {}),
+        };
+        assert_eq!(
+            openapiv3::Schema {
+                schema_data: Default::default(),
+                schema_kind: openapiv3::SchemaKind::Type(Type::Array(ArrayType {
+                    items: Some(ReferenceOr::Item(Box::from(boolean_schema))),
+                    min_items: None,
+                    max_items: None,
+                    unique_items: false,
+                }))
+            }
+            .to_json_schema(),
+            json!({"type": "array", "items": {"type": "boolean"}})
+        )
+    }
+
+    #[test]
+    fn array_items() {
+        let array_schema = openapiv3::Schema {
+            schema_data: Default::default(),
+            schema_kind: openapiv3::SchemaKind::Type(Type::Array(ArrayType {
+                items: None,
+                min_items: None,
+                max_items: None,
+                unique_items: false,
+            })),
+        };
+        assert_eq!(
+            openapiv3::Schema {
+                schema_data: Default::default(),
+                schema_kind: openapiv3::SchemaKind::Type(Type::Array(ArrayType {
+                    items: Some(ReferenceOr::Item(Box::from(array_schema))),
+                    min_items: None,
+                    max_items: None,
+                    unique_items: false,
+                }))
+            }
+            .to_json_schema(),
+            json!({"type": "array", "items": {"type": "array"}})
         )
     }
 }
