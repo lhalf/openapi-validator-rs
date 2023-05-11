@@ -18,6 +18,9 @@ impl JSONSchema for openapiv3::Schema {
             openapiv3::SchemaKind::Type(Type::Integer(integer_schema)) => {
                 integer_schema.to_json_schema()
             }
+            openapiv3::SchemaKind::Type(Type::Object(object_schema)) => {
+                object_schema.to_json_schema()
+            }
             openapiv3::SchemaKind::Type(Type::Array(array_schema)) => array_schema.to_json_schema(),
             _ => todo!(),
         }
@@ -128,6 +131,14 @@ impl JSONSchema for openapiv3::ArrayType {
                 json.insert("items".to_string(), schema.to_json_schema());
             }
         }
+        json.into()
+    }
+}
+
+impl JSONSchema for openapiv3::ObjectType {
+    fn to_json_schema(&self) -> serde_json::Value {
+        let mut json = serde_json::Map::new();
+        json.insert("type".to_string(), serde_json::Value::from("object"));
         json.into()
     }
 }
@@ -698,6 +709,30 @@ mod test_array {
             }
             .to_json_schema(),
             json!({"type": "array"})
+        )
+    }
+}
+
+#[cfg(test)]
+mod test_object {
+    use super::*;
+    use openapiv3::ObjectType;
+
+    #[test]
+    fn basic() {
+        assert_eq!(
+            openapiv3::Schema {
+                schema_data: Default::default(),
+                schema_kind: openapiv3::SchemaKind::Type(Type::Object(ObjectType {
+                    properties: Default::default(),
+                    required: vec![],
+                    additional_properties: None,
+                    min_properties: None,
+                    max_properties: None,
+                }))
+            }
+            .to_json_schema(),
+            json!({"type": "object"})
         )
     }
 }
