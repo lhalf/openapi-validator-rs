@@ -79,6 +79,9 @@ impl JSONSchema for openapiv3::NumberType {
                 self.exclusive_minimum.into(),
             );
         }
+        if let Some(multiple_of) = self.multiple_of {
+            json.insert("multipleOf".to_string(), multiple_of.into());
+        }
         json.into()
     }
 }
@@ -298,6 +301,26 @@ mod test_number {
             }
             .to_json_schema(),
             json!({"type": "number", "minimum": 2.1, "maximum": 5.6, "exclusiveMinimum": true, "exclusiveMaximum": true})
+        )
+    }
+
+    #[test]
+    fn multiple_of() {
+        assert_eq!(
+            openapiv3::Schema {
+                schema_data: Default::default(),
+                schema_kind: openapiv3::SchemaKind::Type(Type::Number(NumberType {
+                    format: Default::default(),
+                    multiple_of: Some(1.1),
+                    exclusive_minimum: false,
+                    exclusive_maximum: false,
+                    minimum: None,
+                    maximum: None,
+                    enumeration: vec![],
+                }))
+            }
+            .to_json_schema(),
+            json!({"type": "number", "multipleOf": 1.1})
         )
     }
 }
