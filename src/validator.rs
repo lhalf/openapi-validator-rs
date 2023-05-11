@@ -131,13 +131,9 @@ impl<'body> ValidatedContentType<'body> {
 }
 
 fn validate_json_body(schema: &openapiv3::Schema, body: &[u8]) -> Result<(), ()> {
-    if !serde_json::from_slice::<serde_json::Value>(body).is_ok() {
-        return Err(());
-    }
+    let json_body = serde_json::from_slice::<serde_json::Value>(body).or(Err(()))?;
 
-    let schema = JSONSchema::compile(&schema.to_owned().to_json_schema()).expect("a valid schema");
-
-    let json_body = serde_json::from_slice::<serde_json::Value>(body).unwrap();
+    let schema = JSONSchema::compile(&schema.to_owned().to_json_schema()).or(Err(()))?;
 
     if schema.is_valid(&json_body) {
         return Ok(());
