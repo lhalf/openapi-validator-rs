@@ -1,3 +1,5 @@
+use crate::jsonschema::ToJSONSchema;
+use jsonschema::JSONSchema;
 use std::collections::HashMap;
 
 struct Validator {
@@ -129,11 +131,19 @@ impl<'body> ValidatedContentType<'body> {
 }
 
 fn validate_json_body(schema: &openapiv3::Schema, body: &[u8]) -> Result<(), ()> {
-    println!("{:?}", schema);
     if !serde_json::from_slice::<serde_json::Value>(body).is_ok() {
         return Err(());
     }
-    Ok(())
+
+    let schema = JSONSchema::compile(&schema.to_owned().to_json_schema()).expect("a valid schema");
+
+    let json_body = serde_json::from_slice::<serde_json::Value>(body).unwrap();
+
+    if schema.is_valid(&json_body) {
+        return Ok(());
+    }
+
+    Err(())
 }
 
 #[derive(Debug, PartialEq)]
@@ -619,9 +629,11 @@ mod test {
                       application/json:
                         schema:
                           type: object
+                          required:
+                            - key
                           properties:
-                            count:
-                              type: number
+                            key:
+                              type: string
                   responses:
                     200:
                       description: API call successful

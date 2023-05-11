@@ -1,7 +1,7 @@
 use openapiv3::Type;
 use serde_json::json;
 
-trait ToJSONSchema {
+pub trait ToJSONSchema {
     fn to_json_schema(&self) -> serde_json::Value;
 }
 
