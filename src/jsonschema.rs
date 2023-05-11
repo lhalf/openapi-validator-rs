@@ -12,6 +12,9 @@ impl JSONSchema for openapiv3::Schema {
             openapiv3::SchemaKind::Type(Type::String(string_schema)) => {
                 string_schema.to_json_schema()
             }
+            openapiv3::SchemaKind::Type(Type::Number(number_schema)) => {
+                number_schema.to_json_schema()
+            }
             openapiv3::SchemaKind::Type(Type::Array(array_schema)) => array_schema.to_json_schema(),
             _ => todo!(),
         }
@@ -50,6 +53,17 @@ impl JSONSchema for openapiv3::ArrayType {
     fn to_json_schema(&self) -> serde_json::Value {
         let mut json = serde_json::Map::new();
         json.insert("type".to_string(), serde_json::Value::from("array"));
+        json.into()
+    }
+}
+
+impl JSONSchema for openapiv3::NumberType {
+    fn to_json_schema(&self) -> serde_json::Value {
+        let mut json = serde_json::Map::new();
+        json.insert("type".to_string(), serde_json::Value::from("number"));
+        if let Some(minimum) = self.minimum {
+            json.insert("minimum".to_string(), minimum.into());
+        }
         json.into()
     }
 }
@@ -183,6 +197,52 @@ mod test_string {
             }
             .to_json_schema(),
             json!({"type": "string", "format": "date"})
+        )
+    }
+}
+
+#[cfg(test)]
+mod test_number {
+    use super::*;
+    use openapiv3::NumberType;
+
+    #[test]
+    fn basic() {
+        assert_eq!(
+            openapiv3::Schema {
+                schema_data: Default::default(),
+                schema_kind: openapiv3::SchemaKind::Type(Type::Number(NumberType {
+                    format: Default::default(),
+                    multiple_of: None,
+                    exclusive_minimum: false,
+                    exclusive_maximum: false,
+                    minimum: None,
+                    maximum: None,
+                    enumeration: vec![],
+                }))
+            }
+            .to_json_schema(),
+            json!({"type": "number"})
+        )
+    }
+
+    #[test]
+    fn minimum() {
+        assert_eq!(
+            openapiv3::Schema {
+                schema_data: Default::default(),
+                schema_kind: openapiv3::SchemaKind::Type(Type::Number(NumberType {
+                    format: Default::default(),
+                    multiple_of: None,
+                    exclusive_minimum: false,
+                    exclusive_maximum: false,
+                    minimum: Some(2.1),
+                    maximum: None,
+                    enumeration: vec![],
+                }))
+            }
+            .to_json_schema(),
+            json!({"type": "number", "minimum": 2.1})
         )
     }
 }
