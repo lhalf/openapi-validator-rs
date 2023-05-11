@@ -612,7 +612,7 @@ mod test {
     }
 
     #[test]
-    fn validator_can_validate_a_json_body_given_a_schema() {
+    fn validator_can_reject_a_json_body_given_a_schema() {
         let path_spec = indoc!(
             r#"
             paths:
@@ -645,5 +645,49 @@ mod test {
             Err(()),
             make_validator_from_spec(path_spec).validate_request(request)
         );
+    }
+
+    #[test]
+    fn validator_can_validate_a_json_body_given_a_schema() {
+        let path_spec = indoc!(
+            r#"
+            paths:
+              /json/against/schema:
+                post:
+                  summary: Requires a JSON body
+                  requestBody:
+                    required: true
+                    content:
+                      application/json:
+                        schema:
+                          type: object
+                          required:
+                            - name
+                            - count
+                            - date
+                          properties:
+                            name:
+                              type: string
+                            count:
+                              type: integer
+                            date:
+                              type: string
+                              format: date
+                  responses:
+                    200:
+                      description: API call successful
+            "#
+        );
+        let request = Request {
+            path: "/json/against/schema".to_string(),
+            operation: "post".to_string(),
+            body: r#"{"name": "laurence", "count": 10, "date": "2023-05-11"}"#
+                .as_bytes()
+                .to_vec(),
+            headers: HashMap::from([("Content-Type".to_string(), "application/json".to_string())]),
+        };
+        assert!(make_validator_from_spec(path_spec)
+            .validate_request(request)
+            .is_ok());
     }
 }
