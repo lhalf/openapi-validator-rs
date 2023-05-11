@@ -56,6 +56,12 @@ impl JSONSchema for openapiv3::ArrayType {
     fn to_json_schema(&self) -> serde_json::Value {
         let mut json = serde_json::Map::new();
         json.insert("type".to_string(), serde_json::Value::from("array"));
+        if let Some(min_items) = self.min_items {
+            json.insert("minItems".to_string(), min_items.into());
+        }
+        if let Some(max_items) = self.max_items {
+            json.insert("maxItems".to_string(), max_items.into());
+        }
         json.into()
     }
 }
@@ -482,6 +488,40 @@ mod test_array {
             }
             .to_json_schema(),
             json!({"type": "array"})
+        )
+    }
+
+    #[test]
+    fn min_items() {
+        assert_eq!(
+            openapiv3::Schema {
+                schema_data: Default::default(),
+                schema_kind: openapiv3::SchemaKind::Type(Type::Array(ArrayType {
+                    items: None,
+                    min_items: Some(2),
+                    max_items: None,
+                    unique_items: false,
+                }))
+            }
+            .to_json_schema(),
+            json!({"type": "array", "minItems": 2})
+        )
+    }
+
+    #[test]
+    fn min_and_max_items() {
+        assert_eq!(
+            openapiv3::Schema {
+                schema_data: Default::default(),
+                schema_kind: openapiv3::SchemaKind::Type(Type::Array(ArrayType {
+                    items: None,
+                    min_items: Some(2),
+                    max_items: Some(5),
+                    unique_items: false,
+                }))
+            }
+            .to_json_schema(),
+            json!({"type": "array", "minItems": 2, "maxItems": 5})
         )
     }
 }
