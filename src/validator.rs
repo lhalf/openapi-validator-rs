@@ -79,7 +79,7 @@ impl<'operation> ValidatedOperation<'operation> {
         }
 
         match content_type {
-            "application/json" => Ok(ValidatedContentType::JSONBody),
+            "application/json" => Ok(ValidatedContentType::JSONBody { body_spec }),
             "text/plain; charset=utf-8" => Ok(ValidatedContentType::PlainUTF8Body),
             _ => Err(()),
         }
@@ -91,17 +91,30 @@ enum ValidatedContentType<'body> {
     EmptyContentType {
         body_spec: &'body openapiv3::RequestBody,
     },
-    JSONBody,
+    JSONBody {
+        body_spec: &'body openapiv3::RequestBody,
+    },
     PlainUTF8Body,
 }
 
 impl<'body> ValidatedContentType<'body> {
     fn validate_body(&self, body: &[u8]) -> Result<(), ()> {
         match self {
-            Self::JSONBody { .. } => match serde_json::from_slice::<serde_json::Value>(body) {
-                Ok(_) => Ok(()),
-                Err(_) => Err(()),
-            },
+            Self::JSONBody { body_spec } => {
+                if let Some(body_schema) = body_spec.content["application/json"]
+                    .schema
+                    .as_ref()
+                    .and_then(openapiv3::ReferenceOr::as_item)
+                {
+                    return validate_json_body(body_schema, body);
+                }
+
+                if serde_json::from_slice::<serde_json::Value>(body).is_ok() {
+                    return Ok(());
+                }
+
+                Err(())
+            }
             Self::PlainUTF8Body { .. } => match std::str::from_utf8(body) {
                 Ok(_) => Ok(()),
                 Err(_) => Err(()),
@@ -113,6 +126,14 @@ impl<'body> ValidatedContentType<'body> {
             Self::NoSpecification => Ok(()),
         }
     }
+}
+
+fn validate_json_body(schema: &openapiv3::Schema, body: &[u8]) -> Result<(), ()> {
+    println!("{:?}", schema);
+    if !serde_json::from_slice::<serde_json::Value>(body).is_ok() {
+        return Err(());
+    }
+    Ok(())
 }
 
 #[derive(Debug, PartialEq)]
@@ -582,5 +603,39 @@ mod test {
         assert!(make_validator_from_spec(path_spec)
             .validate_request(request)
             .is_ok());
+    }
+
+    #[test]
+    fn validator_can_validate_a_json_body_given_a_schema() {
+        let path_spec = indoc!(
+            r#"
+            paths:
+              /rejects/invalid/json/against/schema:
+                post:
+                  summary: Requires a JSON body
+                  requestBody:
+                    required: true
+                    content:
+                      application/json:
+                        schema:
+                          type: object
+                          properties:
+                            count:
+                              type: number
+                  responses:
+                    200:
+                      description: API call successful
+            "#
+        );
+        let request = Request {
+            path: "/rejects/invalid/json/against/schema".to_string(),
+            operation: "post".to_string(),
+            body: r#"{"not key": "value"}"#.as_bytes().to_vec(),
+            headers: HashMap::from([("Content-Type".to_string(), "application/json".to_string())]),
+        };
+        assert_eq!(
+            Err(()),
+            make_validator_from_spec(path_spec).validate_request(request)
+        );
     }
 }

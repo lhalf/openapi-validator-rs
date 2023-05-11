@@ -145,14 +145,23 @@ impl JSONSchema for openapiv3::ObjectType {
         if let Some(max_properties) = self.max_properties {
             json.insert("maxProperties".to_string(), max_properties.into());
         }
+        if let Some(additional_properties) = &self.additional_properties {
+            json.insert(
+                "additionalProperties".to_string(),
+                match additional_properties {
+                    openapiv3::AdditionalProperties::Any(value) => value.to_owned().into(),
+                    openapiv3::AdditionalProperties::Schema(schema) => {
+                        schema.to_owned().as_item().unwrap().to_json_schema()
+                    }
+                },
+            );
+        }
         if !self.properties.is_empty() {
-            let mut properties = serde_json::Map::new();
-            for pair in &self.properties {
-                properties.insert(
-                    pair.0.to_string(),
-                    pair.1.as_item().unwrap().to_json_schema(),
-                );
-            }
+            let properties: serde_json::Map<_, _> = self
+                .properties
+                .iter()
+                .map(|(key, value)| (key.to_string(), value.as_item().unwrap().to_json_schema()))
+                .collect();
             json.insert("properties".to_string(), properties.into());
         }
         if !self.required.is_empty() {
@@ -962,6 +971,74 @@ mod test_object {
             }
             .to_json_schema(),
             json!({"type": "object", "required": ["count", "is_working"], "properties": {"count": {"type": "number"}, "is_working": {"type": "boolean"}}})
+        )
+    }
+
+    #[test]
+    fn additional_properties_false() {
+        let boolean_schema = openapiv3::Schema {
+            schema_data: Default::default(),
+            schema_kind: openapiv3::SchemaKind::Type(Type::Boolean {}),
+        };
+        let mut properties = indexmap::map::IndexMap::new();
+        properties.insert(
+            "is_working".to_string(),
+            ReferenceOr::Item(Box::from(boolean_schema)),
+        );
+        assert_eq!(
+            openapiv3::Schema {
+                schema_data: Default::default(),
+                schema_kind: openapiv3::SchemaKind::Type(Type::Object(ObjectType {
+                    properties: properties,
+                    required: vec!["is_working".to_string()],
+                    additional_properties: Some(openapiv3::AdditionalProperties::Any(false)),
+                    min_properties: None,
+                    max_properties: None,
+                }))
+            }
+            .to_json_schema(),
+            json!({"type": "object", "properties": {"is_working": {"type": "boolean"}}, "additionalProperties": false, "required": ["is_working"]})
+        )
+    }
+
+    #[test]
+    fn additional_properties_schema() {
+        let number_schema = openapiv3::Schema {
+            schema_data: Default::default(),
+            schema_kind: openapiv3::SchemaKind::Type(Type::Number(NumberType {
+                format: Default::default(),
+                multiple_of: None,
+                exclusive_minimum: false,
+                exclusive_maximum: false,
+                minimum: None,
+                maximum: None,
+                enumeration: vec![],
+            })),
+        };
+        let boolean_schema = openapiv3::Schema {
+            schema_data: Default::default(),
+            schema_kind: openapiv3::SchemaKind::Type(Type::Boolean {}),
+        };
+        let mut properties = indexmap::map::IndexMap::new();
+        properties.insert(
+            "is_working".to_string(),
+            ReferenceOr::Item(Box::from(boolean_schema)),
+        );
+        assert_eq!(
+            openapiv3::Schema {
+                schema_data: Default::default(),
+                schema_kind: openapiv3::SchemaKind::Type(Type::Object(ObjectType {
+                    properties,
+                    required: vec!["is_working".to_string()],
+                    additional_properties: Some(openapiv3::AdditionalProperties::Schema(
+                        Box::from(ReferenceOr::Item(number_schema))
+                    )),
+                    min_properties: None,
+                    max_properties: None,
+                }))
+            }
+            .to_json_schema(),
+            json!({"type": "object", "properties": {"is_working": {"type": "boolean"}}, "additionalProperties": {"type": "number"}, "required": ["is_working"]})
         )
     }
 }
