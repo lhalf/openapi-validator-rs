@@ -124,23 +124,8 @@ impl JSONSchema for openapiv3::ArrayType {
             json.insert("uniqueItems".to_string(), self.unique_items.into());
         }
         if let Some(items) = &self.items {
-            match &items.as_item().unwrap().schema_kind {
-                openapiv3::SchemaKind::Type(Type::Boolean {}) => {
-                    json.insert("items".to_string(), json!({"type": "boolean"}));
-                }
-                openapiv3::SchemaKind::Type(Type::Number(number_schema)) => {
-                    json.insert("items".to_string(), number_schema.to_json_schema());
-                }
-                openapiv3::SchemaKind::Type(Type::Integer(integer_schema)) => {
-                    json.insert("items".to_string(), integer_schema.to_json_schema());
-                }
-                openapiv3::SchemaKind::Type(Type::String(string_schema)) => {
-                    json.insert("items".to_string(), string_schema.to_json_schema());
-                }
-                openapiv3::SchemaKind::Type(Type::Array(array_schema)) => {
-                    json.insert("items".to_string(), array_schema.to_json_schema());
-                }
-                _ => (),
+            if let Some(schema) = &items.as_item() {
+                json.insert("items".to_string(), schema.to_json_schema());
             }
         }
         json.into()
@@ -694,6 +679,25 @@ mod test_array {
             }
             .to_json_schema(),
             json!({"type": "array", "items": {"type": "array"}})
+        )
+    }
+
+    #[test]
+    fn invalid_items() {
+        assert_eq!(
+            openapiv3::Schema {
+                schema_data: Default::default(),
+                schema_kind: openapiv3::SchemaKind::Type(Type::Array(ArrayType {
+                    items: Some(ReferenceOr::Reference {
+                        reference: "not valid".to_string()
+                    }),
+                    min_items: None,
+                    max_items: None,
+                    unique_items: false,
+                }))
+            }
+            .to_json_schema(),
+            json!({"type": "array"})
         )
     }
 }
