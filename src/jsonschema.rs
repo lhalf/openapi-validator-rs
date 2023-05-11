@@ -139,6 +139,12 @@ impl JSONSchema for openapiv3::ObjectType {
     fn to_json_schema(&self) -> serde_json::Value {
         let mut json = serde_json::Map::new();
         json.insert("type".to_string(), serde_json::Value::from("object"));
+        if let Some(min_properties) = self.min_properties {
+            json.insert("minProperties".to_string(), min_properties.into());
+        }
+        if let Some(max_properties) = self.max_properties {
+            json.insert("maxProperties".to_string(), max_properties.into());
+        }
         json.into()
     }
 }
@@ -733,6 +739,42 @@ mod test_object {
             }
             .to_json_schema(),
             json!({"type": "object"})
+        )
+    }
+
+    #[test]
+    fn min_properties() {
+        assert_eq!(
+            openapiv3::Schema {
+                schema_data: Default::default(),
+                schema_kind: openapiv3::SchemaKind::Type(Type::Object(ObjectType {
+                    properties: Default::default(),
+                    required: vec![],
+                    additional_properties: None,
+                    min_properties: Some(2),
+                    max_properties: None,
+                }))
+            }
+            .to_json_schema(),
+            json!({"type": "object", "minProperties": 2})
+        )
+    }
+
+    #[test]
+    fn min_and_max_properties() {
+        assert_eq!(
+            openapiv3::Schema {
+                schema_data: Default::default(),
+                schema_kind: openapiv3::SchemaKind::Type(Type::Object(ObjectType {
+                    properties: Default::default(),
+                    required: vec![],
+                    additional_properties: None,
+                    min_properties: Some(2),
+                    max_properties: Some(5),
+                }))
+            }
+            .to_json_schema(),
+            json!({"type": "object", "minProperties": 2, "maxProperties": 5})
         )
     }
 }
