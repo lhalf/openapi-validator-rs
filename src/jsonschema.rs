@@ -1,11 +1,11 @@
 use openapiv3::Type;
 use serde_json::json;
 
-trait JSONSchema {
+trait ToJSONSchema {
     fn to_json_schema(&self) -> serde_json::Value;
 }
 
-impl JSONSchema for openapiv3::Schema {
+impl ToJSONSchema for openapiv3::Schema {
     fn to_json_schema(&self) -> serde_json::Value {
         match &self.schema_kind {
             openapiv3::SchemaKind::Type(Type::Boolean {}) => json!({"type": "boolean"}),
@@ -62,7 +62,7 @@ impl JSONSchema for openapiv3::Schema {
     }
 }
 
-impl JSONSchema for openapiv3::StringType {
+impl ToJSONSchema for openapiv3::StringType {
     fn to_json_schema(&self) -> serde_json::Value {
         let mut json = serde_json::Map::new();
         json.insert("type".to_string(), serde_json::Value::from("string"));
@@ -90,7 +90,7 @@ impl JSONSchema for openapiv3::StringType {
     }
 }
 
-impl JSONSchema for openapiv3::NumberType {
+impl ToJSONSchema for openapiv3::NumberType {
     fn to_json_schema(&self) -> serde_json::Value {
         let mut json = serde_json::Map::new();
         json.insert("type".to_string(), serde_json::Value::from("number"));
@@ -119,7 +119,7 @@ impl JSONSchema for openapiv3::NumberType {
     }
 }
 
-impl JSONSchema for openapiv3::IntegerType {
+impl ToJSONSchema for openapiv3::IntegerType {
     fn to_json_schema(&self) -> serde_json::Value {
         let mut json = serde_json::Map::new();
         json.insert("type".to_string(), serde_json::Value::from("integer"));
@@ -148,7 +148,7 @@ impl JSONSchema for openapiv3::IntegerType {
     }
 }
 
-impl JSONSchema for openapiv3::ArrayType {
+impl ToJSONSchema for openapiv3::ArrayType {
     fn to_json_schema(&self) -> serde_json::Value {
         let mut json = serde_json::Map::new();
         json.insert("type".to_string(), serde_json::Value::from("array"));
@@ -170,7 +170,7 @@ impl JSONSchema for openapiv3::ArrayType {
     }
 }
 
-impl JSONSchema for openapiv3::ObjectType {
+impl ToJSONSchema for openapiv3::ObjectType {
     fn to_json_schema(&self) -> serde_json::Value {
         let mut json = serde_json::Map::new();
         json.insert("type".to_string(), serde_json::Value::from("object"));
@@ -1266,5 +1266,25 @@ mod test_not {
             .to_json_schema(),
             json!({"not": {"type": "boolean"}})
         )
+    }
+}
+
+#[cfg(test)]
+mod test_validation {
+    use super::*;
+    use jsonschema::JSONSchema;
+
+    #[test]
+    fn basic() {
+        let schema_json = openapiv3::Schema {
+            schema_data: Default::default(),
+            schema_kind: openapiv3::SchemaKind::Type(Type::Boolean {}),
+        }
+        .to_json_schema();
+        assert_eq!(json!({"type": "boolean"}), schema_json);
+
+        let instance = json!(true);
+        let schema = JSONSchema::compile(&schema_json).expect("a valid schema");
+        assert_eq!(true, schema.is_valid(&instance));
     }
 }
