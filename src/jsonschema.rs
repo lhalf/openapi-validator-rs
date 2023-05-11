@@ -1351,9 +1351,11 @@ mod test_validation {
         );
 
         let good_json = json!({"count": 10.1});
-        let bad_json = json!({"not_count": 10.1});
+        let wrong_key = json!({"not_count": 10.1});
+        let wrong_type = json!({"count": "string"});
         let schema = JSONSchema::compile(&schema_json).expect("a valid schema");
         assert_eq!(true, schema.is_valid(&good_json));
-        assert_eq!(false, schema.is_valid(&bad_json));
+        assert_eq!(false, schema.is_valid(&wrong_key));
+        assert_eq!(false, schema.is_valid(&wrong_type));
     }
 }
