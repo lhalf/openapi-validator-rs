@@ -35,7 +35,10 @@ impl JSONSchema for openapiv3::StringType {
                 openapiv3::StringFormat::DateTime => {
                     json.insert("format".to_string(), "date-time".into());
                 }
-                _ => todo!(),
+                openapiv3::StringFormat::Date => {
+                    json.insert("format".to_string(), "date".into());
+                }
+                _ => (),
             }
         }
         json.into()
@@ -43,12 +46,11 @@ impl JSONSchema for openapiv3::StringType {
 }
 
 #[cfg(test)]
-mod test {
+mod test_boolean {
     use super::*;
-    use openapiv3::StringType;
 
     #[test]
-    fn boolean() {
+    fn basic() {
         assert_eq!(
             openapiv3::Schema {
                 schema_data: Default::default(),
@@ -58,9 +60,15 @@ mod test {
             json!({"type": "boolean"})
         )
     }
+}
+
+#[cfg(test)]
+mod test_string {
+    use super::*;
+    use openapiv3::StringType;
 
     #[test]
-    fn string() {
+    fn basic() {
         assert_eq!(
             openapiv3::Schema {
                 schema_data: Default::default(),
@@ -78,7 +86,7 @@ mod test {
     }
 
     #[test]
-    fn min_length_string() {
+    fn min_length() {
         assert_eq!(
             openapiv3::Schema {
                 schema_data: Default::default(),
@@ -96,7 +104,7 @@ mod test {
     }
 
     #[test]
-    fn min_and_max_length_string() {
+    fn min_and_max_length() {
         assert_eq!(
             openapiv3::Schema {
                 schema_data: Default::default(),
@@ -114,7 +122,7 @@ mod test {
     }
 
     #[test]
-    fn pattern_string() {
+    fn pattern() {
         assert_eq!(
             openapiv3::Schema {
                 schema_data: Default::default(),
@@ -132,7 +140,7 @@ mod test {
     }
 
     #[test]
-    fn format_string() {
+    fn format_date_time() {
         assert_eq!(
             openapiv3::Schema {
                 schema_data: Default::default(),
@@ -148,6 +156,24 @@ mod test {
             }
             .to_json_schema(),
             json!({"type": "string", "format": "date-time"})
+        )
+    }
+
+    #[test]
+    fn format_date() {
+        assert_eq!(
+            openapiv3::Schema {
+                schema_data: Default::default(),
+                schema_kind: openapiv3::SchemaKind::Type(Type::String(StringType {
+                    format: openapiv3::VariantOrUnknownOrEmpty::Item(openapiv3::StringFormat::Date),
+                    pattern: None,
+                    enumeration: vec![],
+                    min_length: None,
+                    max_length: None,
+                }))
+            }
+            .to_json_schema(),
+            json!({"type": "string", "format": "date"})
         )
     }
 }
