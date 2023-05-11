@@ -1273,7 +1273,7 @@ mod test_not {
 mod test_validation {
     use super::*;
     use jsonschema::JSONSchema;
-    use openapiv3::StringType;
+    use openapiv3::{NumberType, ObjectType, ReferenceOr, StringType};
 
     #[test]
     fn boolean() {
@@ -1309,6 +1309,49 @@ mod test_validation {
 
         let good_json = json!("length");
         let bad_json = json!("length_too_long");
+        let schema = JSONSchema::compile(&schema_json).expect("a valid schema");
+        assert_eq!(true, schema.is_valid(&good_json));
+        assert_eq!(false, schema.is_valid(&bad_json));
+    }
+
+    #[test]
+    fn required_properties_in_object() {
+        let number_schema = openapiv3::Schema {
+            schema_data: Default::default(),
+            schema_kind: openapiv3::SchemaKind::Type(Type::Number(NumberType {
+                format: Default::default(),
+                multiple_of: None,
+                exclusive_minimum: false,
+                exclusive_maximum: false,
+                minimum: None,
+                maximum: None,
+                enumeration: vec![],
+            })),
+        };
+        let mut properties = indexmap::map::IndexMap::new();
+        properties.insert(
+            "count".to_string(),
+            ReferenceOr::Item(Box::from(number_schema)),
+        );
+
+        let schema_json = openapiv3::Schema {
+            schema_data: Default::default(),
+            schema_kind: openapiv3::SchemaKind::Type(Type::Object(ObjectType {
+                properties,
+                required: vec!["count".to_string()],
+                additional_properties: None,
+                min_properties: None,
+                max_properties: None,
+            })),
+        }
+        .to_json_schema();
+        assert_eq!(
+            json!({"type": "object", "required": ["count"], "properties": {"count": {"type": "number"}}}),
+            schema_json
+        );
+
+        let good_json = json!({"count": 10.1});
+        let bad_json = json!({"not_count": 10.1});
         let schema = JSONSchema::compile(&schema_json).expect("a valid schema");
         assert_eq!(true, schema.is_valid(&good_json));
         assert_eq!(false, schema.is_valid(&bad_json));
