@@ -1273,9 +1273,10 @@ mod test_not {
 mod test_validation {
     use super::*;
     use jsonschema::JSONSchema;
+    use openapiv3::StringType;
 
     #[test]
-    fn basic() {
+    fn boolean() {
         let schema_json = openapiv3::Schema {
             schema_data: Default::default(),
             schema_kind: openapiv3::SchemaKind::Type(Type::Boolean {}),
@@ -1286,5 +1287,30 @@ mod test_validation {
         let instance = json!(true);
         let schema = JSONSchema::compile(&schema_json).expect("a valid schema");
         assert_eq!(true, schema.is_valid(&instance));
+    }
+
+    #[test]
+    fn string() {
+        let schema_json = openapiv3::Schema {
+            schema_data: Default::default(),
+            schema_kind: openapiv3::SchemaKind::Type(Type::String(StringType {
+                format: Default::default(),
+                pattern: None,
+                enumeration: vec![],
+                min_length: Some(5),
+                max_length: Some(10),
+            })),
+        }
+        .to_json_schema();
+        assert_eq!(
+            json!({"type": "string", "minLength": 5, "maxLength": 10}),
+            schema_json
+        );
+
+        let good_json = json!("length");
+        let bad_json = json!("length_too_long");
+        let schema = JSONSchema::compile(&schema_json).expect("a valid schema");
+        assert_eq!(true, schema.is_valid(&good_json));
+        assert_eq!(false, schema.is_valid(&bad_json));
     }
 }
