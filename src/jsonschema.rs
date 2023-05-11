@@ -67,6 +67,18 @@ impl JSONSchema for openapiv3::NumberType {
         if let Some(maximum) = self.maximum {
             json.insert("maximum".to_string(), maximum.into());
         }
+        if self.exclusive_minimum {
+            json.insert(
+                "exclusiveMinimum".to_string(),
+                self.exclusive_minimum.into(),
+            );
+        }
+        if self.exclusive_maximum {
+            json.insert(
+                "exclusiveMaximum".to_string(),
+                self.exclusive_minimum.into(),
+            );
+        }
         json.into()
     }
 }
@@ -266,6 +278,26 @@ mod test_number {
             }
             .to_json_schema(),
             json!({"type": "number", "minimum": 2.1, "maximum": 5.6})
+        )
+    }
+
+    #[test]
+    fn exclusive_minimum_and_maximum() {
+        assert_eq!(
+            openapiv3::Schema {
+                schema_data: Default::default(),
+                schema_kind: openapiv3::SchemaKind::Type(Type::Number(NumberType {
+                    format: Default::default(),
+                    multiple_of: None,
+                    exclusive_minimum: true,
+                    exclusive_maximum: true,
+                    minimum: Some(2.1),
+                    maximum: Some(5.6),
+                    enumeration: vec![],
+                }))
+            }
+            .to_json_schema(),
+            json!({"type": "number", "minimum": 2.1, "maximum": 5.6, "exclusiveMinimum": true, "exclusiveMaximum": true})
         )
     }
 }
