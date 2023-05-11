@@ -62,6 +62,9 @@ impl JSONSchema for openapiv3::ArrayType {
         if let Some(max_items) = self.max_items {
             json.insert("maxItems".to_string(), max_items.into());
         }
+        if self.unique_items {
+            json.insert("uniqueItems".to_string(), self.unique_items.into());
+        }
         json.into()
     }
 }
@@ -522,6 +525,23 @@ mod test_array {
             }
             .to_json_schema(),
             json!({"type": "array", "minItems": 2, "maxItems": 5})
+        )
+    }
+
+    #[test]
+    fn unique_items() {
+        assert_eq!(
+            openapiv3::Schema {
+                schema_data: Default::default(),
+                schema_kind: openapiv3::SchemaKind::Type(Type::Array(ArrayType {
+                    items: None,
+                    min_items: None,
+                    max_items: None,
+                    unique_items: true,
+                }))
+            }
+            .to_json_schema(),
+            json!({"type": "array", "uniqueItems": true})
         )
     }
 }
