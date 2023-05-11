@@ -155,6 +155,9 @@ impl JSONSchema for openapiv3::ObjectType {
             }
             json.insert("properties".to_string(), properties.into());
         }
+        if !self.required.is_empty() {
+            json.insert("required".to_string(), self.required.to_owned().into());
+        }
         json.into()
     }
 }
@@ -771,6 +774,24 @@ mod test_object {
     }
 
     #[test]
+    fn min_and_max_properties() {
+        assert_eq!(
+            openapiv3::Schema {
+                schema_data: Default::default(),
+                schema_kind: openapiv3::SchemaKind::Type(Type::Object(ObjectType {
+                    properties: Default::default(),
+                    required: vec![],
+                    additional_properties: None,
+                    min_properties: Some(2),
+                    max_properties: Some(5),
+                }))
+            }
+            .to_json_schema(),
+            json!({"type": "object", "minProperties": 2, "maxProperties": 5})
+        )
+    }
+
+    #[test]
     fn number_properties() {
         let number_schema = openapiv3::Schema {
             schema_data: Default::default(),
@@ -863,6 +884,84 @@ mod test_object {
                                    "integer": {"type": "integer", "multipleOf": 10}, 
                                    "boolean": {"type": "boolean"}}, 
                     "minProperties": 3, "maxProperties": 5})
+        )
+    }
+
+    #[test]
+    fn required_properties() {
+        let number_schema = openapiv3::Schema {
+            schema_data: Default::default(),
+            schema_kind: openapiv3::SchemaKind::Type(Type::Number(NumberType {
+                format: Default::default(),
+                multiple_of: None,
+                exclusive_minimum: false,
+                exclusive_maximum: false,
+                minimum: None,
+                maximum: None,
+                enumeration: vec![],
+            })),
+        };
+        let mut properties = indexmap::map::IndexMap::new();
+        properties.insert(
+            "count".to_string(),
+            ReferenceOr::Item(Box::from(number_schema)),
+        );
+        assert_eq!(
+            openapiv3::Schema {
+                schema_data: Default::default(),
+                schema_kind: openapiv3::SchemaKind::Type(Type::Object(ObjectType {
+                    properties,
+                    required: vec!["count".to_string()],
+                    additional_properties: None,
+                    min_properties: None,
+                    max_properties: None,
+                }))
+            }
+            .to_json_schema(),
+            json!({"type": "object", "required": ["count"], "properties": {"count": {"type": "number"}}})
+        )
+    }
+
+    #[test]
+    fn multiple_required_properties() {
+        let number_schema = openapiv3::Schema {
+            schema_data: Default::default(),
+            schema_kind: openapiv3::SchemaKind::Type(Type::Number(NumberType {
+                format: Default::default(),
+                multiple_of: None,
+                exclusive_minimum: false,
+                exclusive_maximum: false,
+                minimum: None,
+                maximum: None,
+                enumeration: vec![],
+            })),
+        };
+        let boolean_schema = openapiv3::Schema {
+            schema_data: Default::default(),
+            schema_kind: openapiv3::SchemaKind::Type(Type::Boolean {}),
+        };
+        let mut properties = indexmap::map::IndexMap::new();
+        properties.insert(
+            "count".to_string(),
+            ReferenceOr::Item(Box::from(number_schema)),
+        );
+        properties.insert(
+            "is_working".to_string(),
+            ReferenceOr::Item(Box::from(boolean_schema)),
+        );
+        assert_eq!(
+            openapiv3::Schema {
+                schema_data: Default::default(),
+                schema_kind: openapiv3::SchemaKind::Type(Type::Object(ObjectType {
+                    properties,
+                    required: vec!["count".to_string(), "is_working".to_string()],
+                    additional_properties: None,
+                    min_properties: None,
+                    max_properties: None,
+                }))
+            }
+            .to_json_schema(),
+            json!({"type": "object", "required": ["count", "is_working"], "properties": {"count": {"type": "number"}, "is_working": {"type": "boolean"}}})
         )
     }
 }
