@@ -1,6 +1,7 @@
 use crate::jsonschema::ToJSONSchema;
 use jsonschema::JSONSchema;
 use std::collections::HashMap;
+use std::ops::Index;
 
 struct Validator {
     api: openapiv3::OpenAPI,
@@ -29,17 +30,21 @@ impl Validator {
             .get(path)
             .and_then(openapiv3::ReferenceOr::as_item)
         {
-            return Ok(ValidatedPath { path_spec });
+            return Ok(ValidatedPath {
+                path_spec,
+                components: &self.api.components,
+            });
         }
         Err(())
     }
 }
 
-struct ValidatedPath<'path> {
-    path_spec: &'path openapiv3::PathItem,
+struct ValidatedPath<'api> {
+    path_spec: &'api openapiv3::PathItem,
+    components: &'api Option<openapiv3::Components>,
 }
 
-impl<'path> ValidatedPath<'path> {
+impl<'api> ValidatedPath<'api> {
     fn validate_operation(&self, operation: &str) -> Result<ValidatedOperation, ()> {
         let operation_spec = match operation {
             "get" => self.path_spec.get.as_ref().ok_or(()),
@@ -48,15 +53,19 @@ impl<'path> ValidatedPath<'path> {
             "post" => self.path_spec.post.as_ref().ok_or(()),
             _ => Err(()),
         }?;
-        Ok(ValidatedOperation { operation_spec })
+        Ok(ValidatedOperation {
+            operation_spec,
+            components: self.components,
+        })
     }
 }
 
-struct ValidatedOperation<'operation> {
-    operation_spec: &'operation openapiv3::Operation,
+struct ValidatedOperation<'api> {
+    operation_spec: &'api openapiv3::Operation,
+    components: &'api Option<openapiv3::Components>,
 }
 
-impl<'operation> ValidatedOperation<'operation> {
+impl<'api> ValidatedOperation<'api> {
     fn validate_content_type(
         &self,
         content_type: Option<&str>,
@@ -81,32 +90,39 @@ impl<'operation> ValidatedOperation<'operation> {
         }
 
         match content_type {
-            "application/json" => Ok(ValidatedContentType::JSONBody { body_spec }),
+            "application/json" => Ok(ValidatedContentType::JSONBody {
+                body_spec,
+                components: self.components,
+            }),
             "text/plain; charset=utf-8" => Ok(ValidatedContentType::PlainUTF8Body),
             _ => Err(()),
         }
     }
 }
 
-enum ValidatedContentType<'body> {
+enum ValidatedContentType<'api> {
     NoSpecification,
     EmptyContentType {
-        body_spec: &'body openapiv3::RequestBody,
+        body_spec: &'api openapiv3::RequestBody,
     },
     JSONBody {
-        body_spec: &'body openapiv3::RequestBody,
+        body_spec: &'api openapiv3::RequestBody,
+        components: &'api Option<openapiv3::Components>,
     },
     PlainUTF8Body,
 }
 
-impl<'body> ValidatedContentType<'body> {
+impl<'api> ValidatedContentType<'api> {
     fn validate_body(&self, body: &[u8]) -> Result<(), ()> {
         match self {
-            Self::JSONBody { body_spec } => {
+            Self::JSONBody {
+                body_spec,
+                components,
+            } => {
                 if let Some(body_schema) = body_spec.content["application/json"]
                     .schema
                     .as_ref()
-                    .and_then(openapiv3::ReferenceOr::as_item)
+                    .map(|reference_or| reference_or.item_or_fetch(components))
                 {
                     return validate_json_body(body_schema, body);
                 }
@@ -140,6 +156,28 @@ fn validate_json_body(schema: &openapiv3::Schema, body: &[u8]) -> Result<(), ()>
     }
 
     Err(())
+}
+
+trait ItemOrFetch<T> {
+    fn item_or_fetch<'api>(&'api self, components: &'api Option<openapiv3::Components>) -> &T;
+}
+
+impl ItemOrFetch<openapiv3::Schema> for openapiv3::ReferenceOr<openapiv3::Schema> {
+    fn item_or_fetch<'api>(
+        &'api self,
+        components: &'api Option<openapiv3::Components>,
+    ) -> &openapiv3::Schema {
+        println!("{:?}", self);
+        match self {
+            Self::Item(item) => item,
+            Self::Reference { reference: _ } => components
+                .as_ref()
+                .unwrap()
+                .schemas
+                .index("Test")
+                .item_or_fetch(components),
+        }
+    }
 }
 
 #[derive(Debug, PartialEq)]
@@ -684,6 +722,41 @@ mod test {
             body: r#"{"name": "laurence", "count": 10, "date": "2023-05-11"}"#
                 .as_bytes()
                 .to_vec(),
+            headers: HashMap::from([("Content-Type".to_string(), "application/json".to_string())]),
+        };
+        assert!(make_validator_from_spec(path_spec)
+            .validate_request(request)
+            .is_ok());
+    }
+
+    #[test]
+    fn test_json_body_can_be_validate_against_component_schema_reference() {
+        let path_spec = indoc!(
+            r#"
+            paths:
+              /json/against/schema:
+                post:
+                  summary: Requires a JSON body
+                  requestBody:
+                    required: true
+                    content:
+                      application/json:
+                        schema:
+                          $ref: '#/components/schemas/Test'
+                  responses:
+                    200:
+                      description: API call successful
+            
+            components:
+              schemas:
+                Test:
+                  type: boolean
+            "#
+        );
+        let request = Request {
+            path: "/json/against/schema".to_string(),
+            operation: "post".to_string(),
+            body: r#"true"#.as_bytes().to_vec(),
             headers: HashMap::from([("Content-Type".to_string(), "application/json".to_string())]),
         };
         assert!(make_validator_from_spec(path_spec)
