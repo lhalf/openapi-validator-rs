@@ -72,6 +72,9 @@ impl ToJSONSchema for openapiv3::StringType {
         if let Some(max_length) = self.max_length {
             json.insert("maxLength".to_string(), max_length.into());
         }
+        if !self.enumeration.is_empty() {
+            json.insert("enum".to_string(), self.enumeration.to_owned().into());
+        }
         if let Some(pattern) = &self.pattern {
             json.insert("pattern".to_string(), pattern.to_string().into());
         }
@@ -279,6 +282,24 @@ mod test_string {
             }
             .to_json_schema(),
             json!({"type": "string", "minLength": 5, "maxLength": 10})
+        )
+    }
+
+    #[test]
+    fn enumeration() {
+        assert_eq!(
+            openapiv3::Schema {
+                schema_data: Default::default(),
+                schema_kind: openapiv3::SchemaKind::Type(Type::String(StringType {
+                    format: Default::default(),
+                    pattern: None,
+                    enumeration: vec![Some("one".to_string()), Some("two".to_string())],
+                    min_length: None,
+                    max_length: None,
+                }))
+            }
+            .to_json_schema(),
+            json!({"type": "string", "enum": ["one", "two"]})
         )
     }
 
