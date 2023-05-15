@@ -28,7 +28,7 @@ impl ToJSONSchema for openapiv3::Schema {
                     .iter()
                     .map(|schema| schema.to_owned().into_item().unwrap().to_json_schema())
                     .collect();
-                json.insert("oneOf".to_string(), schemas.into());
+                json.insert("oneOf".to_string(), schemas);
                 json.into()
             }
             openapiv3::SchemaKind::AllOf { all_of } => {
@@ -37,7 +37,7 @@ impl ToJSONSchema for openapiv3::Schema {
                     .iter()
                     .map(|schema| schema.to_owned().into_item().unwrap().to_json_schema())
                     .collect();
-                json.insert("allOf".to_string(), schemas.into());
+                json.insert("allOf".to_string(), schemas);
                 json.into()
             }
             openapiv3::SchemaKind::AnyOf { any_of } => {
@@ -46,7 +46,7 @@ impl ToJSONSchema for openapiv3::Schema {
                     .iter()
                     .map(|schema| schema.to_owned().into_item().unwrap().to_json_schema())
                     .collect();
-                json.insert("anyOf".to_string(), schemas.into());
+                json.insert("anyOf".to_string(), schemas);
                 json.into()
             }
             openapiv3::SchemaKind::Not { not } => {
