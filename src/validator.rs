@@ -1,7 +1,6 @@
 use crate::jsonschema::ToJSONSchema;
 use jsonschema::JSONSchema;
 use std::collections::HashMap;
-use std::ops::Index;
 
 struct Validator {
     api: openapiv3::OpenAPI,
@@ -119,7 +118,7 @@ impl<'api> ValidatedContentType<'api> {
                 body_spec,
                 components,
             } => {
-                if let Some(body_schema) = body_spec.content["application/json"]
+                if let Some(Ok(body_schema)) = body_spec.content["application/json"]
                     .schema
                     .as_ref()
                     .map(|reference_or| reference_or.item_or_fetch(components))
@@ -159,22 +158,25 @@ fn validate_json_body(schema: &openapiv3::Schema, body: &[u8]) -> Result<(), ()>
 }
 
 trait ItemOrFetch<T> {
-    fn item_or_fetch<'api>(&'api self, components: &'api Option<openapiv3::Components>) -> &T;
+    fn item_or_fetch<'api>(
+        &'api self,
+        components: &'api Option<openapiv3::Components>,
+    ) -> Result<&T, ()>;
 }
 
 impl ItemOrFetch<openapiv3::Schema> for openapiv3::ReferenceOr<openapiv3::Schema> {
     fn item_or_fetch<'api>(
         &'api self,
         components: &'api Option<openapiv3::Components>,
-    ) -> &openapiv3::Schema {
-        println!("{:?}", self);
+    ) -> Result<&openapiv3::Schema, ()> {
         match self {
-            Self::Item(item) => item,
-            Self::Reference { reference: _ } => components
+            Self::Item(item) => Ok(item),
+            Self::Reference { reference } => components
                 .as_ref()
                 .unwrap()
                 .schemas
-                .index("Test")
+                .get(reference.trim_start_matches("#/components/schemas/"))
+                .ok_or(())?
                 .item_or_fetch(components),
         }
     }
@@ -782,5 +784,78 @@ mod test_body {
         assert!(make_validator_from_spec(path_spec)
             .validate_request(request)
             .is_ok());
+    }
+
+    #[test]
+    fn accept_a_valid_json_body_given_component_schema_nested_reference() {
+        let path_spec = indoc!(
+            r#"
+            paths:
+              /json/against/schema:
+                post:
+                  summary: Requires a JSON body
+                  requestBody:
+                    required: true
+                    content:
+                      application/json:
+                        schema:
+                          $ref: '#/components/schemas/Test'
+                  responses:
+                    200:
+                      description: API call successful
+            
+            components:
+              schemas:
+                Test:
+                  $ref: '#/components/schemas/Next'
+                Next:
+                  type: boolean
+            "#
+        );
+        let request = Request {
+            path: "/json/against/schema".to_string(),
+            operation: "post".to_string(),
+            body: r#"true"#.as_bytes().to_vec(),
+            headers: HashMap::from([("Content-Type".to_string(), "application/json".to_string())]),
+        };
+        assert!(make_validator_from_spec(path_spec)
+            .validate_request(request)
+            .is_ok());
+    }
+
+    #[test]
+    fn reject_given_component_schema_reference_with_incorrect_reference() {
+        let path_spec = indoc!(
+            r#"
+            paths:
+              /json/against/schema:
+                post:
+                  summary: Requires a JSON body
+                  requestBody:
+                    required: true
+                    content:
+                      application/json:
+                        schema:
+                          $ref: '#/components/schemas/NotThere'
+                  responses:
+                    200:
+                      description: API call successful
+            
+            components:
+              schemas:
+                There:
+                  type: boolean
+            "#
+        );
+        let request = Request {
+            path: "/json/against/schema".to_string(),
+            operation: "post".to_string(),
+            body: r#"true"#.as_bytes().to_vec(),
+            headers: HashMap::from([("Content-Type".to_string(), "application/json".to_string())]),
+        };
+        assert_eq!(
+            Err(()),
+            make_validator_from_spec(path_spec).validate_request(request)
+        );
     }
 }
