@@ -118,6 +118,9 @@ impl ToJSONSchema for openapiv3::NumberType {
         if let Some(multiple_of) = self.multiple_of {
             json.insert("multipleOf".to_string(), multiple_of.into());
         }
+        if !self.enumeration.is_empty() {
+            json.insert("enum".to_string(), self.enumeration.to_owned().into());
+        }
         json.into()
     }
 }
@@ -146,6 +149,9 @@ impl ToJSONSchema for openapiv3::IntegerType {
         }
         if let Some(multiple_of) = self.multiple_of {
             json.insert("multipleOf".to_string(), multiple_of.into());
+        }
+        if !self.enumeration.is_empty() {
+            json.insert("enum".to_string(), self.enumeration.to_owned().into());
         }
         json.into()
     }
@@ -464,6 +470,26 @@ mod test_number {
             json!({"type": "number", "multipleOf": 1.1})
         )
     }
+
+    #[test]
+    fn enumeration() {
+        assert_eq!(
+            openapiv3::Schema {
+                schema_data: Default::default(),
+                schema_kind: openapiv3::SchemaKind::Type(Type::Number(NumberType {
+                    format: Default::default(),
+                    multiple_of: None,
+                    exclusive_minimum: false,
+                    exclusive_maximum: false,
+                    minimum: None,
+                    maximum: None,
+                    enumeration: vec![Some(1.1), Some(2.2)],
+                }))
+            }
+            .to_json_schema(),
+            json!({"type": "number", "enum": [1.1, 2.2]})
+        )
+    }
 }
 
 #[cfg(test)]
@@ -568,6 +594,26 @@ mod test_integer {
             }
             .to_json_schema(),
             json!({"type": "integer", "multipleOf": 10})
+        )
+    }
+
+    #[test]
+    fn enumeration() {
+        assert_eq!(
+            openapiv3::Schema {
+                schema_data: Default::default(),
+                schema_kind: openapiv3::SchemaKind::Type(Type::Integer(IntegerType {
+                    format: Default::default(),
+                    multiple_of: None,
+                    exclusive_minimum: false,
+                    exclusive_maximum: false,
+                    minimum: None,
+                    maximum: None,
+                    enumeration: vec![Some(1), Some(2)],
+                }))
+            }
+            .to_json_schema(),
+            json!({"type": "integer", "enum": [1, 2]})
         )
     }
 }
