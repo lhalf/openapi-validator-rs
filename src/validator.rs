@@ -207,39 +207,37 @@ impl Request {
 }
 
 #[cfg(test)]
-mod test {
-    use crate::validator::{Request, Validator};
-    use indoc::indoc;
-    use std::collections::HashMap;
-
-    fn make_validator_from_spec(path_spec: &str) -> Validator {
-        let openapi = indoc!(
-            r#"
+fn make_validator_from_spec(path_spec: &str) -> Validator {
+    let openapi = indoc::indoc!(
+        r#"
             openapi: 3.0.0
             info:
                 description: API to handle generic two-way HTTP requests
                 version: "1.0.0"
                 title: Swagger ReST Article
             "#
-        )
-        .to_string()
-            + path_spec;
-        Validator::new(serde_yaml::from_str(&openapi).unwrap())
-    }
+    )
+    .to_string()
+        + path_spec;
+    Validator::new(serde_yaml::from_str(&openapi).unwrap())
+}
 
-    fn make_validator() -> Validator {
-        let spec: String = std::fs::read_to_string("./specs/openapi.yaml").unwrap();
-        let api: openapiv3::OpenAPI = serde_yaml::from_str(&spec).unwrap();
-        Validator::new(api)
-    }
+#[cfg(test)]
+fn make_validator() -> Validator {
+    let spec: String = std::fs::read_to_string("./specs/openapi.yaml").unwrap();
+    let api: openapiv3::OpenAPI = serde_yaml::from_str(&spec).unwrap();
+    Validator::new(api)
+}
+
+#[cfg(test)]
+mod test_path {
+    use crate::validator::Request;
+    use crate::validator::{make_validator, make_validator_from_spec};
+    use indoc::indoc;
+    use std::collections::HashMap;
 
     #[test]
-    fn validator_can_be_built_with_spec() {
-        make_validator();
-    }
-
-    #[test]
-    fn validator_can_accept_a_request_with_valid_path() {
+    fn accept_a_request_with_valid_path() {
         let validator = make_validator();
         let request = Request {
             path: "/ping".to_string(),
@@ -251,17 +249,17 @@ mod test {
     }
 
     #[test]
-    fn validator_can_reject_a_request_with_invalid_path() {
+    fn reject_a_request_with_invalid_path() {
         let path_spec = indoc!(
             r#"
-            paths:
-              /ping:
-                get:
-                  summary: Ping
-                  responses:
-                    200:
-                      description: API call successful
-            "#
+           paths:
+             /ping:
+               get:
+                 summary: Ping
+                 responses:
+                   200:
+                     description: API call successful
+           "#
         );
         let request = Request {
             path: "/invalid/path".to_string(),
@@ -274,9 +272,17 @@ mod test {
             make_validator_from_spec(path_spec).validate_request(request)
         );
     }
+}
+
+#[cfg(test)]
+mod test_operations {
+    use crate::validator::make_validator_from_spec;
+    use crate::validator::Request;
+    use indoc::indoc;
+    use std::collections::HashMap;
 
     #[test]
-    fn validator_can_accept_a_request_with_put_operation() {
+    fn accept_a_request_with_put_operation() {
         let path_spec = indoc!(
             r#"
             paths:
@@ -299,7 +305,7 @@ mod test {
     }
 
     #[test]
-    fn validator_can_accept_a_request_with_post_operation() {
+    fn accept_a_request_with_post_operation() {
         let path_spec = indoc!(
             r#"
             paths:
@@ -322,7 +328,7 @@ mod test {
     }
 
     #[test]
-    fn validator_can_accept_a_request_with_delete_operation() {
+    fn accept_a_request_with_delete_operation() {
         let path_spec = indoc!(
             r#"
             paths:
@@ -343,37 +349,17 @@ mod test {
             .validate_request(request)
             .is_ok());
     }
+}
+
+#[cfg(test)]
+mod test_headers {
+    use crate::validator::make_validator_from_spec;
+    use crate::validator::Request;
+    use indoc::indoc;
+    use std::collections::HashMap;
 
     #[test]
-    fn validator_can_reject_a_request_with_no_body_if_required() {
-        let path_spec = indoc!(
-            r#"
-            paths:
-              /required/body:
-                post:
-                  summary: Requires a body
-                  requestBody:
-                    required: true
-                  responses:
-                    200:
-                      description: API call successful
-            "#
-        );
-        let request = Request {
-            path: "/required/body".to_string(),
-            operation: "post".to_string(),
-            body: vec![],
-            headers: HashMap::new(),
-        };
-        assert_eq!(
-            Err(()),
-            make_validator_from_spec(path_spec).validate_request(request)
-        );
-    }
-
-    #[test]
-    fn validator_can_reject_a_request_where_body_required_and_content_type_in_header_but_not_in_spec(
-    ) {
+    fn reject_a_request_where_body_required_and_content_type_in_header_but_not_in_spec() {
         let path_spec = indoc!(
             r#"
             paths:
@@ -403,7 +389,138 @@ mod test {
     }
 
     #[test]
-    fn validator_can_accept_a_request_with_no_body_if_not_required() {
+    fn reject_a_request_where_body_is_optional_but_specified_content_type_is_not_in_spec() {
+        let path_spec = indoc!(
+            r#"
+            paths:
+              /not/required/body:
+                post:
+                  summary: Requires a body
+                  requestBody:
+                    required: false
+                  responses:
+                    200:
+                      description: API call successful
+            "#
+        );
+        let request = Request {
+            path: "/not/required/body".to_string(),
+            operation: "post".to_string(),
+            body: "babe".as_bytes().to_vec(),
+            headers: HashMap::from([(
+                "Content-Type".to_string(),
+                "text/plain; charset=utf-8".to_string(),
+            )]),
+        };
+        assert_eq!(
+            Err(()),
+            make_validator_from_spec(path_spec).validate_request(request)
+        );
+    }
+
+    #[test]
+    fn select_which_content_to_validate_given_content_type_header_invalid_case() {
+        let path_spec = indoc!(
+            r#"
+            paths:
+              /allows/utf8/or/json/body:
+                post:
+                  summary: Requires a JSON body
+                  requestBody:
+                    required: true
+                    content:
+                      application/json:
+                        schema:
+                      text/plain; charset=utf-8:
+                        schema:
+                  responses:
+                    200:
+                      description: API call successful
+            "#
+        );
+        let request = Request {
+            path: "/allows/utf8/or/json/body".to_string(),
+            operation: "post".to_string(),
+            body: "ab".as_bytes().to_vec(),
+            headers: HashMap::from([("Content-Type".to_string(), "application/json".to_string())]),
+        };
+        assert_eq!(
+            Err(()),
+            make_validator_from_spec(path_spec).validate_request(request)
+        );
+    }
+
+    #[test]
+    fn select_which_content_to_validate_given_content_type_header_valid_case() {
+        let path_spec = indoc!(
+            r#"
+            paths:
+              /allows/utf8/or/json/body:
+                post:
+                  summary: Requires a JSON body
+                  requestBody:
+                    required: true
+                    content:
+                      application/json:
+                        schema:
+                      text/plain; charset=utf-8:
+                        schema:
+                  responses:
+                    200:
+                      description: API call successful
+            "#
+        );
+        let request = Request {
+            path: "/allows/utf8/or/json/body".to_string(),
+            operation: "post".to_string(),
+            body: "ab".as_bytes().to_vec(),
+            headers: HashMap::from([(
+                "Content-Type".to_string(),
+                "text/plain; charset=utf-8".to_string(),
+            )]),
+        };
+        assert!(make_validator_from_spec(path_spec)
+            .validate_request(request)
+            .is_ok());
+    }
+}
+
+#[cfg(test)]
+mod test_body {
+    use crate::validator::make_validator_from_spec;
+    use crate::validator::Request;
+    use indoc::indoc;
+    use std::collections::HashMap;
+
+    #[test]
+    fn reject_a_request_with_no_body_if_required() {
+        let path_spec = indoc!(
+            r#"
+            paths:
+              /required/body:
+                post:
+                  summary: Requires a body
+                  requestBody:
+                    required: true
+                  responses:
+                    200:
+                      description: API call successful
+            "#
+        );
+        let request = Request {
+            path: "/required/body".to_string(),
+            operation: "post".to_string(),
+            body: vec![],
+            headers: HashMap::new(),
+        };
+        assert_eq!(
+            Err(()),
+            make_validator_from_spec(path_spec).validate_request(request)
+        );
+    }
+
+    #[test]
+    fn accept_a_request_with_no_body_if_not_required() {
         let path_spec = indoc!(
             r#"
             paths:
@@ -429,38 +546,7 @@ mod test {
     }
 
     #[test]
-    fn validator_can_reject_a_request_where_body_is_optional_but_specified_content_type_is_not_in_spec(
-    ) {
-        let path_spec = indoc!(
-            r#"
-            paths:
-              /not/required/body:
-                post:
-                  summary: Requires a body
-                  requestBody:
-                    required: false
-                  responses:
-                    200:
-                      description: API call successful
-            "#
-        );
-        let request = Request {
-            path: "/not/required/body".to_string(),
-            operation: "post".to_string(),
-            body: "babe".as_bytes().to_vec(),
-            headers: HashMap::from([(
-                "Content-Type".to_string(),
-                "text/plain; charset=utf-8".to_string(),
-            )]),
-        };
-        assert_eq!(
-            Err(()),
-            make_validator_from_spec(path_spec).validate_request(request)
-        );
-    }
-
-    #[test]
-    fn validator_can_accept_a_request_with_a_json_body_if_required() {
+    fn accept_a_request_with_a_json_body_if_required() {
         let path_spec = indoc!(
             r#"
             paths:
@@ -489,7 +575,7 @@ mod test {
     }
 
     #[test]
-    fn validator_can_reject_a_request_with_invalid_json_body_if_required() {
+    fn reject_a_request_with_invalid_json_body_if_required() {
         let path_spec = indoc!(
             r#"
             paths:
@@ -519,7 +605,7 @@ mod test {
     }
 
     #[test]
-    fn validator_can_accept_a_request_with_valid_utf8_body_if_required() {
+    fn accept_a_request_with_valid_utf8_body_if_required() {
         let path_spec = indoc!(
             r#"
             paths:
@@ -551,7 +637,7 @@ mod test {
     }
 
     #[test]
-    fn validator_can_reject_a_request_with_invalid_utf8_body_if_required() {
+    fn reject_a_request_with_invalid_utf8_body_if_required() {
         let path_spec = indoc!(
             r#"
             paths:
@@ -584,73 +670,7 @@ mod test {
     }
 
     #[test]
-    fn validator_can_select_which_content_to_validate_given_content_type_header_invalid_case() {
-        let path_spec = indoc!(
-            r#"
-            paths:
-              /allows/utf8/or/json/body:
-                post:
-                  summary: Requires a JSON body
-                  requestBody:
-                    required: true
-                    content:
-                      application/json:
-                        schema:
-                      text/plain; charset=utf-8:
-                        schema:
-                  responses:
-                    200:
-                      description: API call successful
-            "#
-        );
-        let request = Request {
-            path: "/allows/utf8/or/json/body".to_string(),
-            operation: "post".to_string(),
-            body: "ab".as_bytes().to_vec(),
-            headers: HashMap::from([("Content-Type".to_string(), "application/json".to_string())]),
-        };
-        assert_eq!(
-            Err(()),
-            make_validator_from_spec(path_spec).validate_request(request)
-        );
-    }
-
-    #[test]
-    fn validator_can_select_which_content_to_validate_given_content_type_header_valid_case() {
-        let path_spec = indoc!(
-            r#"
-            paths:
-              /allows/utf8/or/json/body:
-                post:
-                  summary: Requires a JSON body
-                  requestBody:
-                    required: true
-                    content:
-                      application/json:
-                        schema:
-                      text/plain; charset=utf-8:
-                        schema:
-                  responses:
-                    200:
-                      description: API call successful
-            "#
-        );
-        let request = Request {
-            path: "/allows/utf8/or/json/body".to_string(),
-            operation: "post".to_string(),
-            body: "ab".as_bytes().to_vec(),
-            headers: HashMap::from([(
-                "Content-Type".to_string(),
-                "text/plain; charset=utf-8".to_string(),
-            )]),
-        };
-        assert!(make_validator_from_spec(path_spec)
-            .validate_request(request)
-            .is_ok());
-    }
-
-    #[test]
-    fn validator_can_reject_a_json_body_given_a_schema() {
+    fn reject_a_json_body_given_a_schema() {
         let path_spec = indoc!(
             r#"
             paths:
@@ -686,7 +706,7 @@ mod test {
     }
 
     #[test]
-    fn validator_can_validate_a_json_body_given_a_schema() {
+    fn accept_a_valid_json_body_given_a_schema() {
         let path_spec = indoc!(
             r#"
             paths:
@@ -730,7 +750,7 @@ mod test {
     }
 
     #[test]
-    fn test_json_body_can_be_validate_against_component_schema_reference() {
+    fn accept_a_valid_json_body_given_component_schema_reference() {
         let path_spec = indoc!(
             r#"
             paths:
