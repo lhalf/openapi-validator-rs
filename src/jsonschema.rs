@@ -54,10 +54,10 @@ impl ToJSONSchema for openapiv3::StringType {
     fn to_json_schema(&self) -> serde_json::Value {
         let mut json = serde_json::Map::new();
         json.insert("type".to_string(), serde_json::Value::from("string"));
-        insert_if_some(&mut json, "minLength", &self.min_length);
-        insert_if_some(&mut json, "maxLength", &self.max_length);
-        insert_if_not_empty(&mut json, "enum", &self.enumeration);
-        insert_if_some(&mut json, "pattern", &self.pattern);
+        json.insert_if_some("minLength", &self.min_length);
+        json.insert_if_some("maxLength", &self.max_length);
+        json.insert_if_not_empty("enum", &self.enumeration);
+        json.insert_if_some("pattern", &self.pattern);
         if let openapiv3::VariantOrUnknownOrEmpty::Item(format) = &self.format {
             match format {
                 openapiv3::StringFormat::DateTime => {
@@ -77,12 +77,12 @@ impl ToJSONSchema for openapiv3::NumberType {
     fn to_json_schema(&self) -> serde_json::Value {
         let mut json = serde_json::Map::new();
         json.insert("type".to_string(), serde_json::Value::from("number"));
-        insert_if_some(&mut json, "minimum", &self.minimum);
-        insert_if_some(&mut json, "maximum", &self.maximum);
-        insert_if_true(&mut json, "exclusiveMinimum", self.exclusive_minimum);
-        insert_if_true(&mut json, "exclusiveMaximum", self.exclusive_maximum);
-        insert_if_some(&mut json, "multipleOf", &self.multiple_of);
-        insert_if_not_empty(&mut json, "enum", &self.enumeration);
+        json.insert_if_some("minimum", &self.minimum);
+        json.insert_if_some("maximum", &self.maximum);
+        json.insert_if_true("exclusiveMinimum", self.exclusive_minimum);
+        json.insert_if_true("exclusiveMaximum", self.exclusive_maximum);
+        json.insert_if_some("multipleOf", &self.multiple_of);
+        json.insert_if_not_empty("enum", &self.enumeration);
         json.into()
     }
 }
@@ -91,12 +91,12 @@ impl ToJSONSchema for openapiv3::IntegerType {
     fn to_json_schema(&self) -> serde_json::Value {
         let mut json = serde_json::Map::new();
         json.insert("type".to_string(), serde_json::Value::from("integer"));
-        insert_if_some(&mut json, "minimum", &self.minimum);
-        insert_if_some(&mut json, "maximum", &self.maximum);
-        insert_if_true(&mut json, "exclusiveMinimum", self.exclusive_minimum);
-        insert_if_true(&mut json, "exclusiveMaximum", self.exclusive_maximum);
-        insert_if_some(&mut json, "multipleOf", &self.multiple_of);
-        insert_if_not_empty(&mut json, "enum", &self.enumeration);
+        json.insert_if_some("minimum", &self.minimum);
+        json.insert_if_some("maximum", &self.maximum);
+        json.insert_if_true("exclusiveMinimum", self.exclusive_minimum);
+        json.insert_if_true("exclusiveMaximum", self.exclusive_maximum);
+        json.insert_if_some("multipleOf", &self.multiple_of);
+        json.insert_if_not_empty("enum", &self.enumeration);
         json.into()
     }
 }
@@ -105,9 +105,9 @@ impl ToJSONSchema for openapiv3::ArrayType {
     fn to_json_schema(&self) -> serde_json::Value {
         let mut json = serde_json::Map::new();
         json.insert("type".to_string(), serde_json::Value::from("array"));
-        insert_if_some(&mut json, "minItems", &self.min_items);
-        insert_if_some(&mut json, "maxItems", &self.max_items);
-        insert_if_true(&mut json, "uniqueItems", self.unique_items);
+        json.insert_if_some("minItems", &self.min_items);
+        json.insert_if_some("maxItems", &self.max_items);
+        json.insert_if_true("uniqueItems", self.unique_items);
         if let Some(items) = &self.items {
             if let Some(schema) = &items.as_item() {
                 json.insert("items".to_string(), schema.to_json_schema());
@@ -121,8 +121,8 @@ impl ToJSONSchema for openapiv3::ObjectType {
     fn to_json_schema(&self) -> serde_json::Value {
         let mut json = serde_json::Map::new();
         json.insert("type".to_string(), serde_json::Value::from("object"));
-        insert_if_some(&mut json, "minProperties", &self.min_properties);
-        insert_if_some(&mut json, "maxProperties", &self.max_properties);
+        json.insert_if_some("minProperties", &self.min_properties);
+        json.insert_if_some("maxProperties", &self.max_properties);
         if let Some(additional_properties) = &self.additional_properties {
             json.insert(
                 "additionalProperties".to_string(),
@@ -142,7 +142,7 @@ impl ToJSONSchema for openapiv3::ObjectType {
                 .collect();
             json.insert("properties".to_string(), properties.into());
         }
-        insert_if_not_empty(&mut json, "required", &self.required);
+        json.insert_if_not_empty("required", &self.required);
         json.into()
     }
 }
@@ -155,29 +155,45 @@ impl ToJSONSchema for Vec<openapiv3::ReferenceOr<openapiv3::Schema>> {
     }
 }
 
-fn insert_if_some<T: Into<serde_json::Value> + Clone>(
-    json: &mut serde_json::Map<String, serde_json::Value>,
-    key: &str,
-    optional_value: &Option<T>,
-) {
-    if let Some(value) = optional_value {
-        json.insert(key.to_string(), value.clone().into());
-    }
+trait InsertIf {
+    fn insert_if_some<T: Into<serde_json::Value> + Clone>(
+        &mut self,
+        key: &str,
+        optional_value: &Option<T>,
+    );
+    fn insert_if_true(&mut self, key: &str, value: bool);
+    fn insert_if_not_empty<T: Into<serde_json::Value> + Clone>(
+        &mut self,
+        key: &str,
+        value: &Vec<T>,
+    );
 }
 
-fn insert_if_true(json: &mut serde_json::Map<String, serde_json::Value>, key: &str, value: bool) {
-    if value {
-        json.insert(key.to_string(), value.into());
+impl InsertIf for serde_json::Map<String, serde_json::Value> {
+    fn insert_if_some<T: Into<serde_json::Value> + Clone>(
+        &mut self,
+        key: &str,
+        optional_value: &Option<T>,
+    ) {
+        if let Some(value) = optional_value {
+            self.insert(key.to_string(), value.clone().into());
+        }
     }
-}
 
-fn insert_if_not_empty<T: Into<serde_json::Value> + Clone>(
-    json: &mut serde_json::Map<String, serde_json::Value>,
-    key: &str,
-    value: &Vec<T>,
-) {
-    if !value.is_empty() {
-        json.insert(key.to_string(), value.clone().into());
+    fn insert_if_true(&mut self, key: &str, value: bool) {
+        if value {
+            self.insert(key.to_string(), value.into());
+        }
+    }
+
+    fn insert_if_not_empty<T: Into<serde_json::Value> + Clone>(
+        &mut self,
+        key: &str,
+        value: &Vec<T>,
+    ) {
+        if !value.is_empty() {
+            self.insert(key.to_string(), value.clone().into());
+        }
     }
 }
 
