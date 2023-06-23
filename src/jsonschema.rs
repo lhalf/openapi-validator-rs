@@ -108,11 +108,14 @@ impl ToJSONSchema for openapiv3::ArrayType {
         json.insert_if_some("minItems", &self.min_items);
         json.insert_if_some("maxItems", &self.max_items);
         json.insert_if_true("uniqueItems", self.unique_items);
-        if let Some(items) = &self.items {
-            if let Some(schema) = &items.as_item() {
-                json.insert("items".to_string(), schema.to_json_schema());
-            }
-        }
+        json.insert_if_some(
+            "items",
+            &self
+                .items
+                .as_ref()
+                .and_then(|reference_or| reference_or.as_item())
+                .map(|schema| schema.to_json_schema()),
+        );
         json.into()
     }
 }
