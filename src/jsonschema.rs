@@ -93,18 +93,8 @@ impl ToJSONSchema for openapiv3::NumberType {
         json.insert("type".to_string(), serde_json::Value::from("number"));
         add_optional_value(&mut json, "minimum", &self.minimum);
         add_optional_value(&mut json, "maximum", &self.maximum);
-        if self.exclusive_minimum {
-            json.insert(
-                "exclusiveMinimum".to_string(),
-                self.exclusive_minimum.into(),
-            );
-        }
-        if self.exclusive_maximum {
-            json.insert(
-                "exclusiveMaximum".to_string(),
-                self.exclusive_minimum.into(),
-            );
-        }
+        add_boolean_value(&mut json, "exclusiveMinimum", self.exclusive_minimum);
+        add_boolean_value(&mut json, "exclusiveMaximum", self.exclusive_maximum);
         add_optional_value(&mut json, "multipleOf", &self.multiple_of);
         if !self.enumeration.is_empty() {
             json.insert("enum".to_string(), self.enumeration.to_owned().into());
@@ -119,18 +109,8 @@ impl ToJSONSchema for openapiv3::IntegerType {
         json.insert("type".to_string(), serde_json::Value::from("integer"));
         add_optional_value(&mut json, "minimum", &self.minimum);
         add_optional_value(&mut json, "maximum", &self.maximum);
-        if self.exclusive_minimum {
-            json.insert(
-                "exclusiveMinimum".to_string(),
-                self.exclusive_minimum.into(),
-            );
-        }
-        if self.exclusive_maximum {
-            json.insert(
-                "exclusiveMaximum".to_string(),
-                self.exclusive_minimum.into(),
-            );
-        }
+        add_boolean_value(&mut json, "exclusiveMinimum", self.exclusive_minimum);
+        add_boolean_value(&mut json, "exclusiveMaximum", self.exclusive_maximum);
         add_optional_value(&mut json, "multipleOf", &self.multiple_of);
         if !self.enumeration.is_empty() {
             json.insert("enum".to_string(), self.enumeration.to_owned().into());
@@ -145,9 +125,7 @@ impl ToJSONSchema for openapiv3::ArrayType {
         json.insert("type".to_string(), serde_json::Value::from("array"));
         add_optional_value(&mut json, "minItems", &self.min_items);
         add_optional_value(&mut json, "maxItems", &self.max_items);
-        if self.unique_items {
-            json.insert("uniqueItems".to_string(), self.unique_items.into());
-        }
+        add_boolean_value(&mut json, "uniqueItems", self.unique_items);
         if let Some(items) = &self.items {
             if let Some(schema) = &items.as_item() {
                 json.insert("items".to_string(), schema.to_json_schema());
@@ -196,6 +174,16 @@ fn add_optional_value<T: Into<serde_json::Value> + Clone>(
 ) {
     if let Some(value) = optional_value {
         json.insert(key.to_string(), value.clone().into());
+    }
+}
+
+fn add_boolean_value(
+    json: &mut serde_json::Map<String, serde_json::Value>,
+    key: &str,
+    value: bool,
+) {
+    if value {
+        json.insert(key.to_string(), value.into());
     }
 }
 
