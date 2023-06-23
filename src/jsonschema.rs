@@ -113,7 +113,7 @@ impl ToJSONSchema for openapiv3::ArrayType {
             &self
                 .items
                 .as_ref()
-                .and_then(|reference_or| reference_or.as_item())
+                .and_then(openapiv3::ReferenceOr::as_item)
                 .map(|schema| schema.to_json_schema()),
         );
         json.into()
