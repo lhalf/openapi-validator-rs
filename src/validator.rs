@@ -821,6 +821,7 @@ mod test_body {
     }
 
     #[test]
+    #[should_panic]
     fn reject_given_component_schema_reference_with_incorrect_reference_panics() {
         let path_spec = indoc!(
             r#"
@@ -850,9 +851,6 @@ mod test_body {
             body: r#"true"#.as_bytes().to_vec(),
             headers: HashMap::from([("Content-Type".to_string(), "application/json".to_string())]),
         };
-        let result = std::panic::catch_unwind(|| {
-            make_validator_from_spec(path_spec).validate_request(request)
-        });
-        assert!(result.is_err());
+        let _ = make_validator_from_spec(path_spec).validate_request(request);
     }
 }
