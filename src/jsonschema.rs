@@ -41,7 +41,7 @@ impl ToJSONSchema for openapiv3::Schema {
                 let mut json = serde_json::Map::new();
                 json.insert(
                     "not".to_string(),
-                    not.to_owned().into_item().unwrap().to_json_schema(),
+                    not.clone().into_item().unwrap().to_json_schema(),
                 );
                 json.into()
             }
@@ -127,9 +127,9 @@ impl ToJSONSchema for openapiv3::ObjectType {
             json.insert(
                 "additionalProperties".to_string(),
                 match additional_properties {
-                    openapiv3::AdditionalProperties::Any(value) => value.to_owned().into(),
+                    openapiv3::AdditionalProperties::Any(value) => value.clone().into(),
                     openapiv3::AdditionalProperties::Schema(schema) => {
-                        schema.to_owned().as_item().unwrap().to_json_schema()
+                        schema.clone().as_item().unwrap().to_json_schema()
                     }
                 },
             );
