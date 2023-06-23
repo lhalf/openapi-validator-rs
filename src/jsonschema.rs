@@ -68,9 +68,7 @@ impl ToJSONSchema for openapiv3::StringType {
         json.insert("type".to_string(), serde_json::Value::from("string"));
         add_optional_value(&mut json, "minLength", &self.min_length);
         add_optional_value(&mut json, "maxLength", &self.max_length);
-        if !self.enumeration.is_empty() {
-            json.insert("enum".to_string(), self.enumeration.to_owned().into());
-        }
+        add_vector(&mut json, "enum", &self.enumeration);
         add_optional_value(&mut json, "pattern", &self.pattern);
         if let openapiv3::VariantOrUnknownOrEmpty::Item(format) = &self.format {
             match format {
@@ -96,9 +94,7 @@ impl ToJSONSchema for openapiv3::NumberType {
         add_boolean_value(&mut json, "exclusiveMinimum", self.exclusive_minimum);
         add_boolean_value(&mut json, "exclusiveMaximum", self.exclusive_maximum);
         add_optional_value(&mut json, "multipleOf", &self.multiple_of);
-        if !self.enumeration.is_empty() {
-            json.insert("enum".to_string(), self.enumeration.to_owned().into());
-        }
+        add_vector(&mut json, "enum", &self.enumeration);
         json.into()
     }
 }
@@ -112,9 +108,7 @@ impl ToJSONSchema for openapiv3::IntegerType {
         add_boolean_value(&mut json, "exclusiveMinimum", self.exclusive_minimum);
         add_boolean_value(&mut json, "exclusiveMaximum", self.exclusive_maximum);
         add_optional_value(&mut json, "multipleOf", &self.multiple_of);
-        if !self.enumeration.is_empty() {
-            json.insert("enum".to_string(), self.enumeration.to_owned().into());
-        }
+        add_vector(&mut json, "enum", &self.enumeration);
         json.into()
     }
 }
@@ -160,9 +154,7 @@ impl ToJSONSchema for openapiv3::ObjectType {
                 .collect();
             json.insert("properties".to_string(), properties.into());
         }
-        if !self.required.is_empty() {
-            json.insert("required".to_string(), self.required.to_owned().into());
-        }
+        add_vector(&mut json, "required", &self.required);
         json.into()
     }
 }
@@ -184,6 +176,16 @@ fn add_boolean_value(
 ) {
     if value {
         json.insert(key.to_string(), value.into());
+    }
+}
+
+fn add_vector<T: Into<serde_json::Value> + Clone>(
+    json: &mut serde_json::Map<String, serde_json::Value>,
+    key: &str,
+    value: &Vec<T>,
+) {
+    if !value.is_empty() {
+        json.insert(key.to_string(), value.clone().into());
     }
 }
 
