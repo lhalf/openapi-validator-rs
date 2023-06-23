@@ -24,29 +24,17 @@ impl ToJSONSchema for openapiv3::Schema {
             openapiv3::SchemaKind::Type(Type::Array(array_schema)) => array_schema.to_json_schema(),
             openapiv3::SchemaKind::OneOf { one_of } => {
                 let mut json = serde_json::Map::new();
-                let schemas: serde_json::Value = one_of
-                    .iter()
-                    .map(|schema| schema.to_owned().into_item().unwrap().to_json_schema())
-                    .collect();
-                json.insert("oneOf".to_string(), schemas);
+                json.insert("oneOf".to_string(), one_of.to_json_schema());
                 json.into()
             }
             openapiv3::SchemaKind::AllOf { all_of } => {
                 let mut json = serde_json::Map::new();
-                let schemas: serde_json::Value = all_of
-                    .iter()
-                    .map(|schema| schema.to_owned().into_item().unwrap().to_json_schema())
-                    .collect();
-                json.insert("allOf".to_string(), schemas);
+                json.insert("allOf".to_string(), all_of.to_json_schema());
                 json.into()
             }
             openapiv3::SchemaKind::AnyOf { any_of } => {
                 let mut json = serde_json::Map::new();
-                let schemas: serde_json::Value = any_of
-                    .iter()
-                    .map(|schema| schema.to_owned().into_item().unwrap().to_json_schema())
-                    .collect();
-                json.insert("anyOf".to_string(), schemas);
+                json.insert("anyOf".to_string(), any_of.to_json_schema());
                 json.into()
             }
             openapiv3::SchemaKind::Not { not } => {
@@ -156,6 +144,14 @@ impl ToJSONSchema for openapiv3::ObjectType {
         }
         add_vector(&mut json, "required", &self.required);
         json.into()
+    }
+}
+
+impl ToJSONSchema for Vec<openapiv3::ReferenceOr<openapiv3::Schema>> {
+    fn to_json_schema(&self) -> serde_json::Value {
+        self.iter()
+            .map(|schema| schema.clone().into_item().unwrap().to_json_schema())
+            .collect()
     }
 }
 
