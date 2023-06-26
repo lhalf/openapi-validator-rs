@@ -66,6 +66,9 @@ impl ToJSONSchema for openapiv3::StringType {
                 openapiv3::StringFormat::Date => {
                     json.insert("format".to_string(), "date".into());
                 }
+                openapiv3::StringFormat::Password => {
+                    json.insert("format".to_string(), "password".into());
+                }
                 _ => (),
             }
         }
@@ -347,6 +350,26 @@ mod test_string {
             }
             .to_json_schema(),
             json!({"type": "string", "format": "date"})
+        )
+    }
+
+    #[test]
+    fn format_password() {
+        assert_eq!(
+            openapiv3::Schema {
+                schema_data: Default::default(),
+                schema_kind: openapiv3::SchemaKind::Type(Type::String(StringType {
+                    format: openapiv3::VariantOrUnknownOrEmpty::Item(
+                        openapiv3::StringFormat::Password
+                    ),
+                    pattern: None,
+                    enumeration: vec![],
+                    min_length: None,
+                    max_length: None,
+                }))
+            }
+            .to_json_schema(),
+            json!({"type": "string", "format": "password"})
         )
     }
 }
