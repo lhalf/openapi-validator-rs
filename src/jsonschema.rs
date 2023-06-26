@@ -69,7 +69,12 @@ impl ToJSONSchema for openapiv3::StringType {
                 openapiv3::StringFormat::Password => {
                     json.insert("format".to_string(), "password".into());
                 }
-                _ => (),
+                openapiv3::StringFormat::Byte => {
+                    json.insert("format".to_string(), "byte".into());
+                }
+                openapiv3::StringFormat::Binary => {
+                    json.insert("format".to_string(), "binary".into());
+                }
             }
         }
         json.into()
@@ -370,6 +375,44 @@ mod test_string {
             }
             .to_json_schema(),
             json!({"type": "string", "format": "password"})
+        )
+    }
+
+    #[test]
+    fn format_byte() {
+        assert_eq!(
+            openapiv3::Schema {
+                schema_data: Default::default(),
+                schema_kind: openapiv3::SchemaKind::Type(Type::String(StringType {
+                    format: openapiv3::VariantOrUnknownOrEmpty::Item(openapiv3::StringFormat::Byte),
+                    pattern: None,
+                    enumeration: vec![],
+                    min_length: None,
+                    max_length: None,
+                }))
+            }
+            .to_json_schema(),
+            json!({"type": "string", "format": "byte"})
+        )
+    }
+
+    #[test]
+    fn format_binary() {
+        assert_eq!(
+            openapiv3::Schema {
+                schema_data: Default::default(),
+                schema_kind: openapiv3::SchemaKind::Type(Type::String(StringType {
+                    format: openapiv3::VariantOrUnknownOrEmpty::Item(
+                        openapiv3::StringFormat::Binary
+                    ),
+                    pattern: None,
+                    enumeration: vec![],
+                    min_length: None,
+                    max_length: None,
+                }))
+            }
+            .to_json_schema(),
+            json!({"type": "string", "format": "binary"})
         )
     }
 }
