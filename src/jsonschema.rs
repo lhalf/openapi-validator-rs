@@ -145,24 +145,29 @@ impl ToJSONSchema for openapiv3::ObjectType {
                 },
             );
         }
-        if !self.properties.is_empty() {
-            let properties: serde_json::Map<_, _> = self
-                .properties
-                .iter()
-                .map(|(key, value)| (key.to_string(), value.as_item().unwrap().to_json_schema()))
-                .collect();
-            json.insert("properties".to_string(), properties.into());
-        }
+        json.insert_if_map_not_empty("properties", &self.properties);
         json.insert_if_not_empty("required", &self.required);
         json.into()
     }
 }
 
-impl ToJSONSchema for Vec<openapiv3::ReferenceOr<openapiv3::Schema>> {
+impl<T: ToJSONSchema + Clone> ToJSONSchema for openapiv3::ReferenceOr<T> {
+    fn to_json_schema(&self) -> serde_json::Value {
+        self.clone().into_item().unwrap().to_json_schema()
+    }
+}
+
+impl<T: ToJSONSchema> ToJSONSchema for Vec<T> {
     fn to_json_schema(&self) -> serde_json::Value {
         self.iter()
-            .map(|schema| schema.clone().into_item().unwrap().to_json_schema())
+            .map(|schema| schema.clone().to_json_schema())
             .collect()
+    }
+}
+
+impl<T: ToJSONSchema> ToJSONSchema for Box<T> {
+    fn to_json_schema(&self) -> serde_json::Value {
+        self.as_ref().to_json_schema()
     }
 }
 
@@ -177,6 +182,11 @@ trait InsertIf {
         &mut self,
         key: &str,
         value: &Vec<T>,
+    );
+    fn insert_if_map_not_empty<T: ToJSONSchema + Clone>(
+        &mut self,
+        key: &str,
+        value: &indexmap::map::IndexMap<String, T>,
     );
 }
 
@@ -204,6 +214,23 @@ impl InsertIf for serde_json::Map<String, serde_json::Value> {
     ) {
         if !value.is_empty() {
             self.insert(key.to_string(), value.clone().into());
+        }
+    }
+
+    fn insert_if_map_not_empty<T: ToJSONSchema + Clone>(
+        &mut self,
+        key: &str,
+        value: &indexmap::map::IndexMap<String, T>,
+    ) {
+        if !value.is_empty() {
+            self.insert(
+                key.to_string(),
+                value
+                    .iter()
+                    .map(|(key, value)| (key.to_string(), value.to_json_schema()))
+                    .collect::<serde_json::Map<_, _>>()
+                    .into(),
+            );
         }
     }
 }
