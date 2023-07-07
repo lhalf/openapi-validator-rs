@@ -23,7 +23,7 @@ impl Validator {
         Ok(request)
     }
 
-    fn validate_path(&self, path: &str) -> Result<ValidatedPath, ()> {
+    fn validate_path(&self, path: &str) -> Result<OperationValidator, ()> {
         if let Some(path_spec) = self
             .api
             .paths
@@ -31,7 +31,7 @@ impl Validator {
             .get(path)
             .and_then(openapiv3::ReferenceOr::as_item)
         {
-            return Ok(ValidatedPath {
+            return Ok(OperationValidator {
                 path_spec,
                 components: &self.api.components,
             });
@@ -40,13 +40,13 @@ impl Validator {
     }
 }
 
-struct ValidatedPath<'api> {
+struct OperationValidator<'api> {
     path_spec: &'api openapiv3::PathItem,
     components: &'api Option<openapiv3::Components>,
 }
 
-impl<'api> ValidatedPath<'api> {
-    fn validate_operation(&self, operation: &str) -> Result<ValidatedOperation, ()> {
+impl<'api> OperationValidator<'api> {
+    fn validate_operation(&self, operation: &str) -> Result<ParameterValidator, ()> {
         let operation_spec = match operation {
             "get" => self.path_spec.get.as_ref().ok_or(()),
             "put" => self.path_spec.put.as_ref().ok_or(()),
@@ -54,20 +54,20 @@ impl<'api> ValidatedPath<'api> {
             "post" => self.path_spec.post.as_ref().ok_or(()),
             _ => Err(()),
         }?;
-        Ok(ValidatedOperation {
+        Ok(ParameterValidator {
             operation_spec,
             components: self.components,
         })
     }
 }
 
-struct ValidatedOperation<'api> {
+struct ParameterValidator<'api> {
     operation_spec: &'api openapiv3::Operation,
     components: &'api Option<openapiv3::Components>,
 }
 
-impl<'api> ValidatedOperation<'api> {
-    fn validate_parameters(&self, header_value: Option<&str>) -> Result<ValidatedParameters, ()> {
+impl<'api> ParameterValidator<'api> {
+    fn validate_parameters(&self, header_value: Option<&str>) -> Result<ContentTypeValidator, ()> {
         let thing_header_required = self
             .operation_spec
             .parameters
@@ -83,23 +83,20 @@ impl<'api> ValidatedOperation<'api> {
             return Err(());
         }
 
-        Ok(ValidatedParameters {
+        Ok(ContentTypeValidator {
             operation_spec: self.operation_spec,
             components: self.components,
         })
     }
 }
 
-struct ValidatedParameters<'api> {
+struct ContentTypeValidator<'api> {
     operation_spec: &'api openapiv3::Operation,
     components: &'api Option<openapiv3::Components>,
 }
 
-impl<'api> ValidatedParameters<'api> {
-    fn validate_content_type(
-        &self,
-        content_type: Option<&str>,
-    ) -> Result<ValidatedContentType, ()> {
+impl<'api> ContentTypeValidator<'api> {
+    fn validate_content_type(&self, content_type: Option<&str>) -> Result<BodyValidator, ()> {
         let body_spec = match self
             .operation_spec
             .request_body
@@ -107,12 +104,12 @@ impl<'api> ValidatedParameters<'api> {
             .and_then(openapiv3::ReferenceOr::as_item)
         {
             Some(body_spec) => body_spec,
-            None => return Ok(ValidatedContentType::NoSpecification),
+            None => return Ok(BodyValidator::NoSpecification),
         };
 
         let content_type = match content_type {
             Some(content_type) => content_type,
-            _ => return Ok(ValidatedContentType::EmptyContentType { body_spec }),
+            _ => return Ok(BodyValidator::EmptyContentType { body_spec }),
         };
 
         if !body_spec.content.contains_key(content_type) {
@@ -120,17 +117,17 @@ impl<'api> ValidatedParameters<'api> {
         }
 
         match content_type {
-            "application/json" => Ok(ValidatedContentType::JSONBody {
+            "application/json" => Ok(BodyValidator::JSONBody {
                 body_spec,
                 components: self.components,
             }),
-            "text/plain; charset=utf-8" => Ok(ValidatedContentType::PlainUTF8Body),
+            "text/plain; charset=utf-8" => Ok(BodyValidator::PlainUTF8Body),
             _ => Err(()),
         }
     }
 }
 
-enum ValidatedContentType<'api> {
+enum BodyValidator<'api> {
     NoSpecification,
     EmptyContentType {
         body_spec: &'api openapiv3::RequestBody,
@@ -142,7 +139,7 @@ enum ValidatedContentType<'api> {
     PlainUTF8Body,
 }
 
-impl<'api> ValidatedContentType<'api> {
+impl<'api> BodyValidator<'api> {
     fn validate_body(&self, body: &[u8]) -> Result<(), ()> {
         match self {
             Self::JSONBody {
