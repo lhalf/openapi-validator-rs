@@ -17,7 +17,7 @@ impl Validator {
     fn validate_request(&self, request: Request) -> Result<Request, ()> {
         self.validate_path(request.path())?
             .validate_operation(request.operation())?
-            .validate_parameters(request.get_header("thing"))?
+            .validate_parameters(&request)?
             .validate_content_type(request.get_header("Content-Type"))?
             .validate_body(request.body())?;
         Ok(request)
@@ -67,8 +67,8 @@ struct ParameterValidator<'api> {
 }
 
 impl<'api> ParameterValidator<'api> {
-    fn validate_parameters(&self, header_value: Option<&str>) -> Result<ContentTypeValidator, ()> {
-        let thing_header_required = self
+    fn validate_parameters(&self, request: &Request) -> Result<ContentTypeValidator, ()> {
+        let missing_required_header = self
             .operation_spec
             .parameters
             .iter()
@@ -77,9 +77,11 @@ impl<'api> ParameterValidator<'api> {
                 openapiv3::Parameter::Header { parameter_data, .. } => Some(parameter_data),
                 _ => None,
             })
-            .any(|parameter_data| parameter_data.name == "thing" && parameter_data.required);
+            .any(|parameter_data| {
+                parameter_data.required && request.get_header(&parameter_data.name).is_none()
+            });
 
-        if thing_header_required && header_value.is_none() {
+        if missing_required_header {
             return Err(());
         }
 
@@ -330,6 +332,41 @@ mod test_parameters {
             operation: "post".to_string(),
             body: vec![],
             headers: HashMap::new(),
+        };
+        assert_eq!(
+            Err(()),
+            make_validator_from_spec(path_spec).validate_request(request)
+        );
+    }
+
+    #[test]
+    fn reject_a_request_with_expecting_two_header_parameters() {
+        let path_spec = indoc!(
+            r#"
+            paths:
+              /requires/header/parameter:
+                post:
+                  parameters:
+                    - in: header
+                      name: thing
+                      required: true
+                      schema:
+                        type: bool
+                    - in: header
+                      name: another_thing
+                      required: true
+                      schema:
+                        type: bool
+                  responses:
+                    200:
+                      description: API call successful
+            "#
+        );
+        let request = Request {
+            path: "/requires/header/parameter".to_string(),
+            operation: "post".to_string(),
+            body: vec![],
+            headers: HashMap::from([("thing".to_string(), "true".to_string())]),
         };
         assert_eq!(
             Err(()),
