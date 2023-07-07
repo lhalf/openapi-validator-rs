@@ -17,6 +17,7 @@ impl Validator {
     fn validate_request(&self, request: Request) -> Result<Request, ()> {
         self.validate_path(request.path())?
             .validate_operation(request.operation())?
+            .validate_parameters(request.get_header("thing"))?
             .validate_content_type(request.get_header("Content-Type"))?
             .validate_body(request.body())?;
         Ok(request)
@@ -66,6 +67,35 @@ struct ValidatedOperation<'api> {
 }
 
 impl<'api> ValidatedOperation<'api> {
+    fn validate_parameters(&self, header_value: Option<&str>) -> Result<ValidatedParameters, ()> {
+        let thing_header_required = self
+            .operation_spec
+            .parameters
+            .iter()
+            .map(|parameter| parameter.as_item().unwrap())
+            .filter_map(|parameter| match parameter {
+                openapiv3::Parameter::Header { parameter_data, .. } => Some(parameter_data),
+                _ => None,
+            })
+            .any(|parameter_data| parameter_data.name == "thing" && parameter_data.required);
+
+        if thing_header_required && header_value.is_none() {
+            return Err(());
+        }
+
+        Ok(ValidatedParameters {
+            operation_spec: self.operation_spec,
+            components: self.components,
+        })
+    }
+}
+
+struct ValidatedParameters<'api> {
+    operation_spec: &'api openapiv3::Operation,
+    components: &'api Option<openapiv3::Components>,
+}
+
+impl<'api> ValidatedParameters<'api> {
     fn validate_content_type(
         &self,
         content_type: Option<&str>,
@@ -263,6 +293,44 @@ mod test_path {
         let request = Request {
             path: "/invalid/path".to_string(),
             operation: "get".to_string(),
+            body: vec![],
+            headers: HashMap::new(),
+        };
+        assert_eq!(
+            Err(()),
+            make_validator_from_spec(path_spec).validate_request(request)
+        );
+    }
+}
+
+#[cfg(test)]
+mod test_parameters {
+    use crate::validator::make_validator_from_spec;
+    use crate::validator::Request;
+    use indoc::indoc;
+    use std::collections::HashMap;
+
+    #[test]
+    fn reject_a_request_with_missing_header_parameter() {
+        let path_spec = indoc!(
+            r#"
+            paths:
+              /requires/header/parameter:
+                post:
+                  parameters:
+                    - in: header
+                      name: thing
+                      required: true
+                      schema:
+                        type: bool
+                  responses:
+                    200:
+                      description: API call successful
+            "#
+        );
+        let request = Request {
+            path: "/requires/header/parameter".to_string(),
+            operation: "post".to_string(),
             body: vec![],
             headers: HashMap::new(),
         };
