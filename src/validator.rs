@@ -340,7 +340,7 @@ mod test_parameters {
     }
 
     #[test]
-    fn reject_a_request_with_expecting_two_header_parameters() {
+    fn reject_a_request_expecting_two_header_parameters() {
         let path_spec = indoc!(
             r#"
             paths:
