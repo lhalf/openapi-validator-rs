@@ -84,7 +84,7 @@ impl<'api> ParameterValidator<'api> {
             return Err(());
         }
 
-        let match_all_schemas = self
+        let header_parameters_match_all_schemas = self
             .operation_spec
             .parameters
             .iter()
@@ -107,7 +107,7 @@ impl<'api> ParameterValidator<'api> {
                 schema.is_valid(&json_paramater)
             });
 
-        if !match_all_schemas {
+        if !header_parameters_match_all_schemas {
             return Err(());
         }
 
