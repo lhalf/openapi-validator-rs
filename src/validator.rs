@@ -463,6 +463,40 @@ mod test_parameters {
             make_validator_from_spec(path_spec).validate_request(request)
         );
     }
+
+    #[test]
+    fn accept_a_request_with_multiple_valid_header_parameters() {
+        let path_spec = indoc!(
+            r#"
+            paths:
+              /requires/header/parameter:
+                post:
+                  parameters:
+                    - in: header
+                      name: thing
+                      required: true
+                      schema:
+                        type: boolean
+                    - in: header
+                      name: another_thing
+                      required: true
+                      schema:
+                        type: integer
+                  responses:
+                    200:
+                      description: API call successful
+            "#
+        );
+        let request = Request {
+            path: "/requires/header/parameter".to_string(),
+            operation: "post".to_string(),
+            body: vec![],
+            headers: HashMap::from([("thing".to_string(), "true".to_string()), ("another_thing".to_string(), "1".to_string())]),
+        };
+        assert!(make_validator_from_spec(path_spec)
+            .validate_request(request)
+            .is_ok());
+    }
 }
 
 #[cfg(test)]
