@@ -93,18 +93,18 @@ impl<'api> ParameterValidator<'api> {
                 _ => None,
             })
             .map(|header_parameter_data| match &header_parameter_data.format {
-                openapiv3::ParameterSchemaOrContent::Schema( ref_or ) => ref_or.as_item(),
+                openapiv3::ParameterSchemaOrContent::Schema(ref_or) => Some((ref_or.as_item(), &header_parameter_data.name)),
                 _ => None,
             })
-            .map(|schema| {
-                schema.unwrap().to_json_schema()
+            .map(|schema_and_name| {
+                (schema_and_name.unwrap().0.unwrap().to_json_schema(), schema_and_name.unwrap().1)
             })
-            .all(|jsonschema| {
-                let json_paramater = serde_json::from_slice::<serde_json::Value>(request.get_header("thing").unwrap().as_ref()).unwrap();
+            .all(|(jsonschema, name)| {
+                let json_parameter = serde_json::from_slice::<serde_json::Value>(request.get_header(name).unwrap().as_ref()).unwrap();
 
                 let schema = JSONSchema::compile(&jsonschema).unwrap();
 
-                schema.is_valid(&json_paramater)
+                schema.is_valid(&json_parameter)
             });
 
         if !header_parameters_match_all_schemas {
@@ -271,7 +271,7 @@ fn make_validator_from_spec(path_spec: &str) -> Validator {
                 title: Swagger ReST Article
             "#
     )
-    .to_string()
+        .to_string()
         + path_spec;
     Validator::new(serde_yaml::from_str(&openapi).unwrap())
 }
@@ -423,6 +423,41 @@ mod test_parameters {
             operation: "post".to_string(),
             body: vec![],
             headers: HashMap::from([("thing".to_string(), "1".to_string())]),
+        };
+        assert_eq!(
+            Err(()),
+            make_validator_from_spec(path_spec).validate_request(request)
+        );
+    }
+
+    #[test]
+    fn reject_a_request_with_one_of_multiple_invalid_header_parameter_type() {
+        let path_spec = indoc!(
+            r#"
+            paths:
+              /requires/header/parameter:
+                post:
+                  parameters:
+                    - in: header
+                      name: thing
+                      required: true
+                      schema:
+                        type: boolean
+                    - in: header
+                      name: another_thing
+                      required: true
+                      schema:
+                        type: boolean
+                  responses:
+                    200:
+                      description: API call successful
+            "#
+        );
+        let request = Request {
+            path: "/requires/header/parameter".to_string(),
+            operation: "post".to_string(),
+            body: vec![],
+            headers: HashMap::from([("thing".to_string(), "true".to_string()), ("another_thing".to_string(), "1".to_string())]),
         };
         assert_eq!(
             Err(()),
