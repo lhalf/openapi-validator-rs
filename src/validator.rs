@@ -72,8 +72,8 @@ impl<'api> ParameterValidator<'api> {
             .operation_spec
             .parameters
             .iter()
-            .filter_map(|parameter| match parameter.as_item().unwrap() {
-                openapiv3::Parameter::Header { parameter_data, .. } => Some(parameter_data),
+            .filter_map(|parameter| match parameter.as_item() {
+                Some(openapiv3::Parameter::Header { parameter_data, .. }) => Some(parameter_data),
                 _ => None,
             })
             .any(|parameter_data| {
@@ -88,17 +88,15 @@ impl<'api> ParameterValidator<'api> {
             .operation_spec
             .parameters
             .iter()
-            .filter_map(|parameter| match parameter.as_item().unwrap() {
-                openapiv3::Parameter::Header { parameter_data, .. } => Some(parameter_data),
-                _ => None,
+            .filter_map(|parameter| match parameter.as_item() {
+                Some(openapiv3::Parameter::Header { parameter_data, .. }) => Some(parameter_data),
+                _ => todo!(),
             })
             .map(|header_parameter_data| match &header_parameter_data.format {
-                openapiv3::ParameterSchemaOrContent::Schema(openapiv3::ReferenceOr::Item(schema)) => Some((schema.to_json_schema(), &header_parameter_data.name)),
-                _ => None,
+                openapiv3::ParameterSchemaOrContent::Schema(openapiv3::ReferenceOr::Item(schema)) => (schema.to_json_schema(), &header_parameter_data.name),
+                _ => todo!(),
             })
-            .all(|jsonschema_and_name| {
-                let (jsonschema, name) = jsonschema_and_name.unwrap();
-
+            .all(|(jsonschema, name)| {
                 let json_parameter = serde_json::from_slice::<serde_json::Value>(request.get_header(name).unwrap().as_ref()).unwrap();
 
                 let schema = JSONSchema::compile(&jsonschema).unwrap();
