@@ -93,13 +93,12 @@ impl<'api> ParameterValidator<'api> {
                 _ => None,
             })
             .map(|header_parameter_data| match &header_parameter_data.format {
-                openapiv3::ParameterSchemaOrContent::Schema(ref_or) => Some((ref_or.as_item(), &header_parameter_data.name)),
+                openapiv3::ParameterSchemaOrContent::Schema(openapiv3::ReferenceOr::Item(schema)) => Some((schema.to_json_schema(), &header_parameter_data.name)),
                 _ => None,
             })
-            .map(|schema_and_name| {
-                (schema_and_name.unwrap().0.unwrap().to_json_schema(), schema_and_name.unwrap().1)
-            })
-            .all(|(jsonschema, name)| {
+            .all(|jsonschema_and_name| {
+                let (jsonschema, name) = jsonschema_and_name.unwrap();
+
                 let json_parameter = serde_json::from_slice::<serde_json::Value>(request.get_header(name).unwrap().as_ref()).unwrap();
 
                 let schema = JSONSchema::compile(&jsonschema).unwrap();
