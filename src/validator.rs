@@ -100,7 +100,7 @@ impl ToParameterValidator for openapiv3::Parameter {
 
         match &parameter_data.format {
             openapiv3::ParameterSchemaOrContent::Schema(openapiv3::ReferenceOr::Item(schema)) => {
-                ParameterValidator {
+                ParameterValidator::Header {
                     jsonschema: schema.to_json_schema(),
                     name: parameter_data.name.clone(),
                     required: parameter_data.required,
@@ -111,16 +111,32 @@ impl ToParameterValidator for openapiv3::Parameter {
     }
 }
 
-struct ParameterValidator {
-    jsonschema: serde_json::Value,
-    name: String,
-    required: bool,
+enum ParameterValidator {
+    Header {
+        jsonschema: serde_json::Value,
+        name: String,
+        required: bool,
+    },
 }
 
 impl ParameterValidator {
     fn validate(&self, request: &Request) -> bool {
-        let header_value = match request.get_header(&self.name) {
-            None => return !self.required,
+        match self {
+            ParameterValidator::Header {
+                jsonschema,
+                name,
+                required,
+            } => Self::validate_header_parameter(jsonschema, required, request.get_header(name)),
+        }
+    }
+
+    fn validate_header_parameter(
+        jsonschema: &serde_json::Value,
+        required: &bool,
+        header_value: Option<&str>,
+    ) -> bool {
+        let header_value = match header_value {
+            None => return !*required,
             Some(header_value) => header_value,
         };
 
@@ -130,7 +146,7 @@ impl ParameterValidator {
                 Err(_) => return false,
             };
 
-        let schema = JSONSchema::compile(&self.jsonschema).unwrap();
+        let schema = JSONSchema::compile(jsonschema).unwrap();
 
         schema.is_valid(&json_parameter)
     }
