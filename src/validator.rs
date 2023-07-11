@@ -124,9 +124,11 @@ impl ParameterValidator {
             Some(header_value) => header_value,
         };
 
-        //TODO make test for invalid data, change unwrap
         let json_parameter =
-            serde_json::from_slice::<serde_json::Value>(header_value.as_bytes()).unwrap();
+            match serde_json::from_slice::<serde_json::Value>(header_value.as_bytes()) {
+                Ok(json_parameter) => json_parameter,
+                Err(_) => return false,
+            };
 
         let schema = JSONSchema::compile(&self.jsonschema).unwrap();
 
@@ -519,6 +521,36 @@ mod test_parameters {
         assert!(make_validator_from_spec(path_spec)
             .validate_request(request)
             .is_ok());
+    }
+
+    #[test]
+    fn reject_a_request_with_non_json_header_parameter() {
+        let path_spec = indoc!(
+            r#"
+            paths:
+              /requires/header/parameter:
+                post:
+                  parameters:
+                    - in: header
+                      name: thing
+                      required: true
+                      schema:
+                        type: string
+                  responses:
+                    200:
+                      description: API call successful
+            "#
+        );
+        let request = Request {
+            path: "/requires/header/parameter".to_string(),
+            operation: "post".to_string(),
+            body: vec![],
+            headers: HashMap::from([("thing".to_string(), "p".to_string())]),
+        };
+        assert_eq!(
+            Err(()),
+            make_validator_from_spec(path_spec).validate_request(request)
+        );
     }
 }
 
