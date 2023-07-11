@@ -46,7 +46,7 @@ struct OperationValidator<'api> {
 }
 
 impl<'api> OperationValidator<'api> {
-    fn validate_operation(&self, operation: &str) -> Result<ParameterValidator, ()> {
+    fn validate_operation(&self, operation: &str) -> Result<ParametersValidator, ()> {
         let operation_spec = match operation {
             "get" => self.path_spec.get.as_ref().ok_or(()),
             "put" => self.path_spec.put.as_ref().ok_or(()),
@@ -54,57 +54,29 @@ impl<'api> OperationValidator<'api> {
             "post" => self.path_spec.post.as_ref().ok_or(()),
             _ => Err(()),
         }?;
-        Ok(ParameterValidator {
+        Ok(ParametersValidator {
             operation_spec,
             components: self.components,
         })
     }
 }
 
-struct ParameterValidator<'api> {
+struct ParametersValidator<'api> {
     operation_spec: &'api openapiv3::Operation,
     components: &'api Option<openapiv3::Components>,
 }
 
-impl<'api> ParameterValidator<'api> {
+impl<'api> ParametersValidator<'api> {
     fn validate_parameters(&self, request: &Request) -> Result<ContentTypeValidator, ()> {
-        let missing_required_header = self
-            .operation_spec
-            .parameters
-            .iter()
-            .filter_map(|parameter| match parameter.as_item() {
-                Some(openapiv3::Parameter::Header { parameter_data, .. }) => Some(parameter_data),
-                _ => None,
-            })
-            .any(|parameter_data| {
-                parameter_data.required && request.get_header(&parameter_data.name).is_none()
-            });
+        let all_parameters_valid = self.operation_spec.parameters.iter().all(|parameter| {
+            parameter
+                .as_item()
+                .unwrap()
+                .to_parameter_validator()
+                .validate(request)
+        });
 
-        if missing_required_header {
-            return Err(());
-        }
-
-        let header_parameters_match_all_schemas = self
-            .operation_spec
-            .parameters
-            .iter()
-            .filter_map(|parameter| match parameter.as_item() {
-                Some(openapiv3::Parameter::Header { parameter_data, .. }) => Some(parameter_data),
-                _ => todo!(),
-            })
-            .map(|header_parameter_data| match &header_parameter_data.format {
-                openapiv3::ParameterSchemaOrContent::Schema(openapiv3::ReferenceOr::Item(schema)) => (schema.to_json_schema(), &header_parameter_data.name),
-                _ => todo!(),
-            })
-            .all(|(jsonschema, name)| {
-                let json_parameter = serde_json::from_slice::<serde_json::Value>(request.get_header(name).unwrap().as_ref()).unwrap();
-
-                let schema = JSONSchema::compile(&jsonschema).unwrap();
-
-                schema.is_valid(&json_parameter)
-            });
-
-        if !header_parameters_match_all_schemas {
+        if !all_parameters_valid {
             return Err(());
         }
 
@@ -112,6 +84,53 @@ impl<'api> ParameterValidator<'api> {
             operation_spec: self.operation_spec,
             components: self.components,
         })
+    }
+}
+
+trait ToParameterValidator {
+    fn to_parameter_validator(&self) -> ParameterValidator;
+}
+
+impl ToParameterValidator for openapiv3::Parameter {
+    fn to_parameter_validator(&self) -> ParameterValidator {
+        let parameter_data = match self {
+            openapiv3::Parameter::Header { parameter_data, .. } => parameter_data,
+            _ => todo!(),
+        };
+
+        match &parameter_data.format {
+            openapiv3::ParameterSchemaOrContent::Schema(openapiv3::ReferenceOr::Item(schema)) => {
+                ParameterValidator {
+                    jsonschema: schema.to_json_schema(),
+                    name: parameter_data.name.clone(),
+                    required: parameter_data.required,
+                }
+            }
+            _ => todo!(),
+        }
+    }
+}
+
+struct ParameterValidator {
+    jsonschema: serde_json::Value,
+    name: String,
+    required: bool,
+}
+
+impl ParameterValidator {
+    fn validate(&self, request: &Request) -> bool {
+        let header_value = match request.get_header(&self.name) {
+            None => return !self.required,
+            Some(header_value) => header_value,
+        };
+
+        //TODO make test for invalid data, change unwrap
+        let json_parameter =
+            serde_json::from_slice::<serde_json::Value>(header_value.as_bytes()).unwrap();
+
+        let schema = JSONSchema::compile(&self.jsonschema).unwrap();
+
+        schema.is_valid(&json_parameter)
     }
 }
 
@@ -268,7 +287,7 @@ fn make_validator_from_spec(path_spec: &str) -> Validator {
                 title: Swagger ReST Article
             "#
     )
-        .to_string()
+    .to_string()
         + path_spec;
     Validator::new(serde_yaml::from_str(&openapi).unwrap())
 }
@@ -344,7 +363,7 @@ mod test_parameters {
                       name: thing
                       required: true
                       schema:
-                        type: bool
+                        type: boolean
                   responses:
                     200:
                       description: API call successful
@@ -374,12 +393,12 @@ mod test_parameters {
                       name: thing
                       required: true
                       schema:
-                        type: bool
+                        type: boolean
                     - in: header
                       name: another_thing
                       required: true
                       schema:
-                        type: bool
+                        type: boolean
                   responses:
                     200:
                       description: API call successful
@@ -454,7 +473,10 @@ mod test_parameters {
             path: "/requires/header/parameter".to_string(),
             operation: "post".to_string(),
             body: vec![],
-            headers: HashMap::from([("thing".to_string(), "true".to_string()), ("another_thing".to_string(), "1".to_string())]),
+            headers: HashMap::from([
+                ("thing".to_string(), "true".to_string()),
+                ("another_thing".to_string(), "1".to_string()),
+            ]),
         };
         assert_eq!(
             Err(()),
@@ -489,7 +511,10 @@ mod test_parameters {
             path: "/requires/header/parameter".to_string(),
             operation: "post".to_string(),
             body: vec![],
-            headers: HashMap::from([("thing".to_string(), "true".to_string()), ("another_thing".to_string(), "1".to_string())]),
+            headers: HashMap::from([
+                ("thing".to_string(), "true".to_string()),
+                ("another_thing".to_string(), "1".to_string()),
+            ]),
         };
         assert!(make_validator_from_spec(path_spec)
             .validate_request(request)
