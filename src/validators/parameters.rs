@@ -96,7 +96,7 @@ impl ParameterValidator {
 }
 
 #[cfg(test)]
-mod test_parameters {
+mod test_header_parameters {
     use crate::validators::request::make_validator_from_spec;
     use crate::validators::request::Request;
     use indoc::indoc;
