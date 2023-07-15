@@ -15,7 +15,8 @@ impl Validator {
 
     //take &self rather than self otherwise Validator is consumed by validate_request (dropped)
     pub fn validate_request(&self, request: Request) -> Result<Request, ()> {
-        self.validate_path(self.parse_url(request.url())?.path())?
+        let url = self.parse_url(request.url())?;
+        self.validate_path(url.path())?
             .validate_operation(request.operation())?
             .validate_parameters(&request)?
             .validate_content_type(request.get_header("Content-Type"))?
