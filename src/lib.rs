@@ -1,3 +1,3 @@
 mod item_or_fetch;
-mod jsonschema;
+mod to_jsonschema;
 mod validators;

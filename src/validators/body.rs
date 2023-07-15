@@ -1,5 +1,5 @@
 use crate::item_or_fetch::ItemOrFetch;
-use crate::jsonschema::ToJSONSchema;
+use crate::to_jsonschema::ToJSONSchema;
 use jsonschema::JSONSchema;
 
 pub enum BodyValidator<'api> {

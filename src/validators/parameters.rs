@@ -3,7 +3,7 @@ use url::Url;
 
 use super::content_type::ContentTypeValidator;
 use super::request::Request;
-use crate::jsonschema::ToJSONSchema;
+use crate::to_jsonschema::ToJSONSchema;
 
 pub struct ParametersValidator<'api> {
     pub operation_spec: &'api openapiv3::Operation,
