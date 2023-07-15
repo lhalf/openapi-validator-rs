@@ -57,7 +57,7 @@ pub struct Request {
 }
 
 impl Request {
-    fn url(&self) -> &str {
+    pub fn url(&self) -> &str {
         &self.url
     }
 

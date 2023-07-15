@@ -1,4 +1,5 @@
 use jsonschema::JSONSchema;
+use url::Url;
 
 use super::content_type::ContentTypeValidator;
 use super::request::Request;
@@ -38,15 +39,24 @@ impl ToParameterValidator for openapiv3::Parameter {
     fn to_parameter_validator(&self) -> ParameterValidator {
         let parameter_data = match self {
             openapiv3::Parameter::Header { parameter_data, .. } => parameter_data,
+            openapiv3::Parameter::Query { parameter_data, .. } => parameter_data,
             _ => todo!(),
         };
 
         match &parameter_data.format {
             openapiv3::ParameterSchemaOrContent::Schema(openapiv3::ReferenceOr::Item(schema)) => {
-                ParameterValidator::Header {
-                    jsonschema: schema.to_json_schema(),
-                    name: parameter_data.name.clone(),
-                    required: parameter_data.required,
+                match self {
+                    openapiv3::Parameter::Header { .. } => ParameterValidator::Header {
+                        jsonschema: schema.to_json_schema(),
+                        name: parameter_data.name.clone(),
+                        required: parameter_data.required,
+                    },
+                    openapiv3::Parameter::Query { .. } => ParameterValidator::Query {
+                        jsonschema: schema.to_json_schema(),
+                        name: parameter_data.name.clone(),
+                        required: parameter_data.required,
+                    },
+                    _ => todo!()
                 }
             }
             _ => todo!(),
@@ -56,6 +66,11 @@ impl ToParameterValidator for openapiv3::Parameter {
 
 enum ParameterValidator {
     Header {
+        jsonschema: serde_json::Value,
+        name: String,
+        required: bool,
+    },
+    Query {
         jsonschema: serde_json::Value,
         name: String,
         required: bool,
@@ -70,6 +85,14 @@ impl ParameterValidator {
                 name,
                 required,
             } => Self::validate_header_parameter(jsonschema, required, request.get_header(name)),
+            ParameterValidator::Query {
+                jsonschema,
+                name,
+                required,
+            } => {
+                let url = Url::parse(request.url()).unwrap();
+                Self::validate_query_parameter(jsonschema, required, Self::extract_query_parameter_from_url(&url, name).as_deref())
+            }
         }
     }
 
@@ -85,6 +108,34 @@ impl ParameterValidator {
 
         let json_parameter =
             match serde_json::from_slice::<serde_json::Value>(header_value.as_bytes()) {
+                Ok(json_parameter) => json_parameter,
+                Err(_) => return false,
+            };
+
+        let schema = JSONSchema::compile(jsonschema).unwrap();
+
+        schema.is_valid(&json_parameter)
+    }
+
+    fn extract_query_parameter_from_url(url: &Url, name: &String) -> Option<String> {
+        match url.query_pairs().find(|(key, ..)| key == name) {
+            Some((.., value)) => Some(value.to_string()),
+            None => None,
+        }
+    }
+
+    fn validate_query_parameter(
+        jsonschema: &serde_json::Value,
+        required: &bool,
+        query_value: Option<&str>,
+    ) -> bool {
+        let query_value = match query_value {
+            None => return !*required,
+            Some(query_value) => query_value,
+        };
+
+        let json_parameter =
+            match serde_json::from_slice::<serde_json::Value>(query_value.as_bytes()) {
                 Ok(json_parameter) => json_parameter,
                 Err(_) => return false,
             };
@@ -295,6 +346,44 @@ mod test_header_parameters {
             operation: "post".to_string(),
             body: vec![],
             headers: HashMap::from([("thing".to_string(), "p".to_string())]),
+        };
+        assert_eq!(
+            Err(()),
+            make_validator_from_spec(path_spec).validate_request(request)
+        );
+    }
+}
+
+#[cfg(test)]
+mod test_query_parameters {
+    use crate::validators::request::make_validator_from_spec;
+    use crate::validators::request::Request;
+    use indoc::indoc;
+    use std::collections::HashMap;
+
+    #[test]
+    fn reject_a_request_with_missing_query_parameter() {
+        let path_spec = indoc!(
+            r#"
+            paths:
+              /requires/query/parameter:
+                post:
+                  parameters:
+                    - in: query
+                      name: thing
+                      required: true
+                      schema:
+                        type: boolean
+                  responses:
+                    200:
+                      description: API call successful
+            "#
+        );
+        let request = Request {
+            url: "http://test.com/requires/query/parameter".to_string(),
+            operation: "post".to_string(),
+            body: vec![],
+            headers: HashMap::new(),
         };
         assert_eq!(
             Err(()),
