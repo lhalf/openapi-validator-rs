@@ -121,7 +121,7 @@ mod test_header_parameters {
             "#
         );
         let request = Request {
-            path: "/requires/header/parameter".to_string(),
+            url: "http://test.com/requires/header/parameter".to_string(),
             operation: "post".to_string(),
             body: vec![],
             headers: HashMap::new(),
@@ -156,7 +156,7 @@ mod test_header_parameters {
             "#
         );
         let request = Request {
-            path: "/requires/header/parameter".to_string(),
+            url: "http://test.com/requires/header/parameter".to_string(),
             operation: "post".to_string(),
             body: vec![],
             headers: HashMap::from([("thing".to_string(), "true".to_string())]),
@@ -186,7 +186,7 @@ mod test_header_parameters {
             "#
         );
         let request = Request {
-            path: "/requires/header/parameter".to_string(),
+            url: "http://test.com/requires/header/parameter".to_string(),
             operation: "post".to_string(),
             body: vec![],
             headers: HashMap::from([("thing".to_string(), "1".to_string())]),
@@ -221,7 +221,7 @@ mod test_header_parameters {
             "#
         );
         let request = Request {
-            path: "/requires/header/parameter".to_string(),
+            url: "http://test.com/requires/header/parameter".to_string(),
             operation: "post".to_string(),
             body: vec![],
             headers: HashMap::from([
@@ -259,7 +259,7 @@ mod test_header_parameters {
             "#
         );
         let request = Request {
-            path: "/requires/header/parameter".to_string(),
+            url: "http://test.com/requires/header/parameter".to_string(),
             operation: "post".to_string(),
             body: vec![],
             headers: HashMap::from([
@@ -291,7 +291,7 @@ mod test_header_parameters {
             "#
         );
         let request = Request {
-            path: "/requires/header/parameter".to_string(),
+            url: "http://test.com/requires/header/parameter".to_string(),
             operation: "post".to_string(),
             body: vec![],
             headers: HashMap::from([("thing".to_string(), "p".to_string())]),

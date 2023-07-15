@@ -22,48 +22,11 @@ impl<'api> OperationValidator<'api> {
 }
 
 #[cfg(test)]
-mod test_paths {
+mod test_operations {
     use crate::validators::request::Request;
-    use crate::validators::request::{make_validator, make_validator_from_spec};
+    use crate::validators::request::make_validator_from_spec;
     use indoc::indoc;
     use std::collections::HashMap;
-
-    #[test]
-    fn accept_a_request_with_valid_path() {
-        let validator = make_validator();
-        let request = Request {
-            path: "/ping".to_string(),
-            operation: "get".to_string(),
-            body: vec![],
-            headers: HashMap::new(),
-        };
-        assert!(validator.validate_request(request).is_ok());
-    }
-
-    #[test]
-    fn reject_a_request_with_invalid_path() {
-        let path_spec = indoc!(
-            r#"
-           paths:
-             /ping:
-               get:
-                 summary: Ping
-                 responses:
-                   200:
-                     description: API call successful
-           "#
-        );
-        let request = Request {
-            path: "/invalid/path".to_string(),
-            operation: "get".to_string(),
-            body: vec![],
-            headers: HashMap::new(),
-        };
-        assert_eq!(
-            Err(()),
-            make_validator_from_spec(path_spec).validate_request(request)
-        );
-    }
 
     #[test]
     fn accept_a_request_with_put_operation() {
@@ -78,7 +41,7 @@ mod test_paths {
             "#
         );
         let request = Request {
-            path: "/allowed/put".to_string(),
+            url: "http://test.com/allowed/put".to_string(),
             operation: "put".to_string(),
             body: vec![],
             headers: HashMap::new(),
@@ -101,7 +64,7 @@ mod test_paths {
             "#
         );
         let request = Request {
-            path: "/allowed/post".to_string(),
+            url: "http://test.com/allowed/post".to_string(),
             operation: "post".to_string(),
             body: vec![],
             headers: HashMap::new(),
@@ -124,7 +87,7 @@ mod test_paths {
             "#
         );
         let request = Request {
-            path: "/allowed/delete".to_string(),
+            url: "http://test.com/allowed/delete".to_string(),
             operation: "delete".to_string(),
             body: vec![],
             headers: HashMap::new(),

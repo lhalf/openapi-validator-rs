@@ -60,7 +60,7 @@ mod test_content_type {
             "#
         );
         let request = Request {
-            path: "/required/body".to_string(),
+            url: "http://test.com/required/body".to_string(),
             operation: "post".to_string(),
             body: "babe".as_bytes().to_vec(),
             headers: HashMap::from([(
@@ -90,7 +90,7 @@ mod test_content_type {
             "#
         );
         let request = Request {
-            path: "/not/required/body".to_string(),
+            url: "http://test.com/not/required/body".to_string(),
             operation: "post".to_string(),
             body: "babe".as_bytes().to_vec(),
             headers: HashMap::from([(
@@ -125,7 +125,7 @@ mod test_content_type {
             "#
         );
         let request = Request {
-            path: "/allows/utf8/or/json/body".to_string(),
+            url: "http://test.com/allows/utf8/or/json/body".to_string(),
             operation: "post".to_string(),
             body: "ab".as_bytes().to_vec(),
             headers: HashMap::from([("Content-Type".to_string(), "application/json".to_string())]),
@@ -157,7 +157,7 @@ mod test_content_type {
             "#
         );
         let request = Request {
-            path: "/allows/utf8/or/json/body".to_string(),
+            url: "http://test.com/allows/utf8/or/json/body".to_string(),
             operation: "post".to_string(),
             body: "ab".as_bytes().to_vec(),
             headers: HashMap::from([(

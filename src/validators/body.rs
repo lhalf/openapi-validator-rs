@@ -83,7 +83,7 @@ mod test_body {
             "#
         );
         let request = Request {
-            path: "/required/body".to_string(),
+            url: "http://test.com/required/body".to_string(),
             operation: "post".to_string(),
             body: vec![],
             headers: HashMap::new(),
@@ -110,7 +110,7 @@ mod test_body {
             "#
         );
         let request = Request {
-            path: "/not/required/body".to_string(),
+            url: "http://test.com/not/required/body".to_string(),
             operation: "post".to_string(),
             body: vec![],
             headers: HashMap::new(),
@@ -139,7 +139,7 @@ mod test_body {
             "#
         );
         let request = Request {
-            path: "/required/json/body".to_string(),
+            url: "http://test.com/required/json/body".to_string(),
             operation: "post".to_string(),
             body: "{}".as_bytes().to_vec(),
             headers: HashMap::from([("Content-Type".to_string(), "application/json".to_string())]),
@@ -168,7 +168,7 @@ mod test_body {
             "#
         );
         let request = Request {
-            path: "/required/json/body".to_string(),
+            url: "http://test.com/required/json/body".to_string(),
             operation: "post".to_string(),
             body: "babe".as_bytes().to_vec(),
             headers: HashMap::from([("Content-Type".to_string(), "application/json".to_string())]),
@@ -198,7 +198,7 @@ mod test_body {
             "#
         );
         let request = Request {
-            path: "/required/utf8/body".to_string(),
+            url: "http://test.com/required/utf8/body".to_string(),
             operation: "post".to_string(),
             body: "ab".as_bytes().to_vec(),
             headers: HashMap::from([(
@@ -230,7 +230,7 @@ mod test_body {
             "#
         );
         let request = Request {
-            path: "/required/utf8/body".to_string(),
+            url: "http://test.com/required/utf8/body".to_string(),
             operation: "post".to_string(),
             body: vec![b'\xc3', b'\x28'],
             headers: HashMap::from([(
@@ -269,7 +269,7 @@ mod test_body {
             "#
         );
         let request = Request {
-            path: "/rejects/invalid/json/against/schema".to_string(),
+            url: "http://test.com/rejects/invalid/json/against/schema".to_string(),
             operation: "post".to_string(),
             body: r#"{"not key": "value"}"#.as_bytes().to_vec(),
             headers: HashMap::from([("Content-Type".to_string(), "application/json".to_string())]),
@@ -312,7 +312,7 @@ mod test_body {
             "#
         );
         let request = Request {
-            path: "/json/against/schema".to_string(),
+            url: "http://test.com/json/against/schema".to_string(),
             operation: "post".to_string(),
             body: r#"{"name": "laurence", "count": 10, "date": "2023-05-11"}"#
                 .as_bytes()
@@ -349,7 +349,7 @@ mod test_body {
             "#
         );
         let request = Request {
-            path: "/json/against/schema".to_string(),
+            url: "http://test.com/json/against/schema".to_string(),
             operation: "post".to_string(),
             body: r#"true"#.as_bytes().to_vec(),
             headers: HashMap::from([("Content-Type".to_string(), "application/json".to_string())]),
@@ -386,7 +386,7 @@ mod test_body {
             "#
         );
         let request = Request {
-            path: "/json/against/schema".to_string(),
+            url: "http://test.com/json/against/schema".to_string(),
             operation: "post".to_string(),
             body: r#"true"#.as_bytes().to_vec(),
             headers: HashMap::from([("Content-Type".to_string(), "application/json".to_string())]),
@@ -422,7 +422,7 @@ mod test_body {
             "#
         );
         let request = Request {
-            path: "/json/against/schema".to_string(),
+            url: "http://test.com/json/against/schema".to_string(),
             operation: "post".to_string(),
             body: r#"true"#.as_bytes().to_vec(),
             headers: HashMap::from([("Content-Type".to_string(), "application/json".to_string())]),
