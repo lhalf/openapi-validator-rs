@@ -474,4 +474,38 @@ mod test_query_parameters {
             .validate_request(request)
             .is_ok());
     }
+
+    #[test]
+    fn accept_a_request_with_multiple_valid_query_parameter() {
+        let path_spec = indoc!(
+            r#"
+            paths:
+              /requires/multiple/query/parameter:
+                post:
+                  parameters:
+                    - in: query
+                      name: thing
+                      required: true
+                      schema:
+                        type: boolean
+                    - in: query
+                      name: another
+                      required: true
+                      schema:
+                        type: string
+                  responses:
+                    200:
+                      description: API call successful
+            "#
+        );
+        let request = Request {
+            url: "http://test.com/requires/multiple/query/parameter?thing=true&another=\"cheese\"".to_string(),
+            operation: "post".to_string(),
+            body: vec![],
+            headers: HashMap::new(),
+        };
+        assert!(make_validator_from_spec(path_spec)
+            .validate_request(request)
+            .is_ok());
+    }
 }
