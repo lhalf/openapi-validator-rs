@@ -1,6 +1,6 @@
 use crate::item_or_fetch::ItemOrFetch;
 use crate::to_jsonschema::ToJSONSchema;
-use jsonschema::JSONSchema;
+use crate::validators::jsonschema::JSONSchemaValidator;
 
 pub enum BodyValidator<'api> {
     NoSpecification,
@@ -49,15 +49,16 @@ impl<'api> BodyValidator<'api> {
 }
 
 fn validate_json_body(schema: &openapiv3::Schema, body: &[u8]) -> Result<(), ()> {
-    let json_body = serde_json::from_slice::<serde_json::Value>(body).or(Err(()))?;
+    let body = match std::str::from_utf8(body) {
+        Ok(body) => body,
+        Err(..) => return Err(())
+    };
 
-    let schema = JSONSchema::compile(&schema.clone().to_json_schema()).or(Err(()))?;
-
-    if schema.is_valid(&json_body) {
-        return Ok(());
+    match schema.clone().to_json_schema().validates(body) {
+        Ok(true) => Ok(()),
+        Ok(false) => Err(()),
+        Err(..) => Err(())
     }
-
-    Err(())
 }
 
 #[cfg(test)]

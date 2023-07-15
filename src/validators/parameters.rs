@@ -1,9 +1,9 @@
-use jsonschema::JSONSchema;
 use url::Url;
 
 use super::content_type::ContentTypeValidator;
 use super::request::Request;
 use crate::to_jsonschema::ToJSONSchema;
+use crate::validators::jsonschema::JSONSchemaValidator;
 
 pub struct ParametersValidator<'api> {
     pub operation_spec: &'api openapiv3::Operation,
@@ -106,15 +106,10 @@ impl ParameterValidator {
             Some(header_value) => header_value,
         };
 
-        let json_parameter =
-            match serde_json::from_slice::<serde_json::Value>(header_value.as_bytes()) {
-                Ok(json_parameter) => json_parameter,
-                Err(_) => return false,
-            };
-
-        let schema = JSONSchema::compile(jsonschema).unwrap();
-
-        schema.is_valid(&json_parameter)
+        match jsonschema.validates(header_value) {
+            Ok(result) => result,
+            Err(..) => false
+        }
     }
 
     fn extract_query_parameter_from_url(url: &Url, name: &String) -> Option<String> {
@@ -134,15 +129,10 @@ impl ParameterValidator {
             Some(query_value) => query_value,
         };
 
-        let json_parameter =
-            match serde_json::from_slice::<serde_json::Value>(query_value.as_bytes()) {
-                Ok(json_parameter) => json_parameter,
-                Err(_) => return false,
-            };
-
-        let schema = JSONSchema::compile(jsonschema).unwrap();
-
-        schema.is_valid(&json_parameter)
+        match jsonschema.validates(query_value) {
+            Ok(result) => result,
+            Err(..) => false
+        }
     }
 }
 
