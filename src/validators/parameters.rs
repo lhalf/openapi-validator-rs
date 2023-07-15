@@ -417,7 +417,7 @@ mod test_query_parameters {
     }
 
     #[test]
-    fn reject_a_request_with_invalid_query_parameter_type() {
+    fn reject_a_request_with_wrong_query_parameter_type() {
         let path_spec = indoc!(
             r#"
             paths:
@@ -507,5 +507,35 @@ mod test_query_parameters {
         assert!(make_validator_from_spec(path_spec)
             .validate_request(request)
             .is_ok());
+    }
+
+    #[test]
+    fn reject_a_request_with_invalid_query_parameter_type() {
+        let path_spec = indoc!(
+            r#"
+            paths:
+              /requires/multiple/query/parameter:
+                post:
+                  parameters:
+                    - in: query
+                      name: thing
+                      required: true
+                      schema:
+                        type: string
+                  responses:
+                    200:
+                      description: API call successful
+            "#
+        );
+        let request = Request {
+            url: "http://test.com/requires/multiple/query/parameter?another=cheese".to_string(),
+            operation: "post".to_string(),
+            body: vec![],
+            headers: HashMap::new(),
+        };
+        assert_eq!(
+            Err(()),
+            make_validator_from_spec(path_spec).validate_request(request)
+        );
     }
 }
