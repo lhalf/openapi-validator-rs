@@ -396,7 +396,7 @@ mod test_query_parameters {
         let path_spec = indoc!(
             r#"
             paths:
-              /requires/query/parameter:
+              /requires/two/query/parameter:
                 post:
                   parameters:
                     - in: query
@@ -415,7 +415,37 @@ mod test_query_parameters {
             "#
         );
         let request = Request {
-            url: "http://test.com/requires/query/parameter?thing=true".to_string(),
+            url: "http://test.com/requires/two/query/parameter?thing=true".to_string(),
+            operation: "post".to_string(),
+            body: vec![],
+            headers: HashMap::new(),
+        };
+        assert_eq!(
+            Err(()),
+            make_validator_from_spec(path_spec).validate_request(request)
+        );
+    }
+
+    #[test]
+    fn reject_a_request_with_invalid_query_parameter_type() {
+        let path_spec = indoc!(
+            r#"
+            paths:
+              /requires/query/parameter:
+                post:
+                  parameters:
+                    - in: query
+                      name: thing
+                      required: true
+                      schema:
+                        type: boolean
+                  responses:
+                    200:
+                      description: API call successful
+            "#
+        );
+        let request = Request {
+            url: "http://test.com/requires/query/parameter?thing=string".to_string(),
             operation: "post".to_string(),
             body: vec![],
             headers: HashMap::new(),
