@@ -510,7 +510,7 @@ mod test_query_parameters {
     }
 
     #[test]
-    fn reject_a_request_with_invalid_query_parameter_type() {
+    fn reject_a_request_with_non_json_query_parameter() {
         let path_spec = indoc!(
             r#"
             paths:
