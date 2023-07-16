@@ -84,29 +84,29 @@ impl ParameterValidator {
                 jsonschema,
                 name,
                 required,
-            } => Self::validate_header_parameter(jsonschema, required, request.get_header(name)),
+            } => Self::validate_parameter(jsonschema, required, request.get_header(name)),
             ParameterValidator::Query {
                 jsonschema,
                 name,
                 required,
             } => {
                 let url = Url::parse(request.url()).unwrap();
-                Self::validate_query_parameter(jsonschema, required, Self::extract_query_parameter_from_url(&url, name).as_deref())
+                Self::validate_parameter(jsonschema, required, Self::extract_query_parameter_from_url(&url, name).as_deref())
             }
         }
     }
 
-    fn validate_header_parameter(
+    fn validate_parameter(
         jsonschema: &serde_json::Value,
         required: &bool,
-        header_value: Option<&str>,
+        parameter_value: Option<&str>,
     ) -> Result<bool, ()> {
-        let header_value = match header_value {
+        let parameter_value = match parameter_value {
             None => return Ok(!*required),
-            Some(header_value) => header_value,
+            Some(parameter_value) => parameter_value,
         };
 
-        jsonschema.validates(header_value)
+        jsonschema.validates(parameter_value)
     }
 
     fn extract_query_parameter_from_url(url: &Url, name: &String) -> Option<String> {
@@ -114,19 +114,6 @@ impl ParameterValidator {
             Some((.., value)) => Some(value.to_string()),
             None => None,
         }
-    }
-
-    fn validate_query_parameter(
-        jsonschema: &serde_json::Value,
-        required: &bool,
-        query_value: Option<&str>,
-    ) -> Result<bool, ()> {
-        let query_value = match query_value {
-            None => return Ok(!*required),
-            Some(query_value) => query_value,
-        };
-
-        jsonschema.validates(query_value)
     }
 }
 
