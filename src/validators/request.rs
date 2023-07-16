@@ -91,10 +91,16 @@ pub fn make_validator_from_spec(path_spec: &str) -> Validator {
 }
 
 #[cfg(test)]
-pub fn make_validator() -> Validator {
-    let spec: String = std::fs::read_to_string("./specs/openapi.yaml").unwrap();
-    let api: openapiv3::OpenAPI = serde_yaml::from_str(&spec).unwrap();
-    Validator::new(api)
+pub fn make_validator() -> Result<Validator, ()> {
+    let spec = match std::fs::read_to_string("./specs/openapi.yaml") {
+        Ok(spec) => spec,
+        Err(..) => return Err(())
+    };
+    let api = match serde_yaml::from_str(&spec) {
+        Ok(api) => api,
+        Err(..) => return Err(())
+    };
+    Ok(Validator::new(api))
 }
 
 #[cfg(test)]
@@ -162,7 +168,7 @@ mod test_paths {
 
     #[test]
     fn accept_a_request_with_valid_path() {
-        let validator = make_validator();
+        let validator = make_validator().unwrap();
         let request = Request {
             url: "http://test.com/ping".to_string(),
             operation: "get".to_string(),
