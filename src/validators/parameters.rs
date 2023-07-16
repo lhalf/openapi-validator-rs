@@ -17,7 +17,7 @@ impl<'api> ParametersValidator<'api> {
                 .as_item()
                 .unwrap()
                 .to_parameter_validator()
-                .validate(request)
+                .validate(request).unwrap_or(false)
         });
 
         if !all_parameters_valid {
@@ -78,7 +78,7 @@ enum ParameterValidator {
 }
 
 impl ParameterValidator {
-    fn validate(&self, request: &Request) -> bool {
+    fn validate(&self, request: &Request) -> Result<bool, ()> {
         match self {
             ParameterValidator::Header {
                 jsonschema,
@@ -100,16 +100,13 @@ impl ParameterValidator {
         jsonschema: &serde_json::Value,
         required: &bool,
         header_value: Option<&str>,
-    ) -> bool {
+    ) -> Result<bool, ()> {
         let header_value = match header_value {
-            None => return !*required,
+            None => return Ok(!*required),
             Some(header_value) => header_value,
         };
 
-        match jsonschema.validates(header_value) {
-            Ok(result) => result,
-            Err(..) => false
-        }
+        jsonschema.validates(header_value)
     }
 
     fn extract_query_parameter_from_url(url: &Url, name: &String) -> Option<String> {
@@ -123,16 +120,13 @@ impl ParameterValidator {
         jsonschema: &serde_json::Value,
         required: &bool,
         query_value: Option<&str>,
-    ) -> bool {
+    ) -> Result<bool, ()> {
         let query_value = match query_value {
-            None => return !*required,
+            None => return Ok(!*required),
             Some(query_value) => query_value,
         };
 
-        match jsonschema.validates(query_value) {
-            Ok(result) => result,
-            Err(..) => false
-        }
+        jsonschema.validates(query_value)
     }
 }
 
