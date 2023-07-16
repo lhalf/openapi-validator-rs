@@ -16,7 +16,6 @@ impl<'api> ParametersValidator<'api> {
             parameter
                 .as_item()
                 .unwrap()
-                .to_parameter_validator()
                 .validate(request).unwrap_or(false)
         });
 
@@ -31,68 +30,31 @@ impl<'api> ParametersValidator<'api> {
     }
 }
 
-trait ToParameterValidator {
-    fn to_parameter_validator(&self) -> ParameterValidator;
+trait ParameterValidator {
+    fn validate(&self, request: &Request) -> Result<bool, ()>;
+    fn validate_parameter(jsonschema: &serde_json::Value, required: &bool, parameter_value: Option<&str>) -> Result<bool, ()>;
 }
 
-impl ToParameterValidator for openapiv3::Parameter {
-    fn to_parameter_validator(&self) -> ParameterValidator {
-        let parameter_data = match self {
-            openapiv3::Parameter::Header { parameter_data, .. } => parameter_data,
-            openapiv3::Parameter::Query { parameter_data, .. } => parameter_data,
-            _ => todo!(),
-        };
+impl ParameterValidator for openapiv3::Parameter {
+    fn validate(&self, request: &Request) -> Result<bool, ()> {
+        let parameter_data = self.clone().parameter_data();
 
         match &parameter_data.format {
             openapiv3::ParameterSchemaOrContent::Schema(openapiv3::ReferenceOr::Item(schema)) => {
                 match self {
-                    openapiv3::Parameter::Header { .. } => ParameterValidator::Header {
-                        jsonschema: schema.to_json_schema(),
-                        name: parameter_data.name.clone(),
-                        required: parameter_data.required,
-                    },
-                    openapiv3::Parameter::Query { .. } => ParameterValidator::Query {
-                        jsonschema: schema.to_json_schema(),
-                        name: parameter_data.name.clone(),
-                        required: parameter_data.required,
-                    },
+                    openapiv3::Parameter::Header { .. } => Self::validate_parameter(&schema.to_json_schema(),
+                                                                                    &parameter_data.required,
+                                                                                    request.get_header(&parameter_data.name)),
+                    openapiv3::Parameter::Query { .. } => {
+                        let url = Url::parse(request.url()).unwrap();
+                        Self::validate_parameter(&schema.to_json_schema(),
+                                                 &parameter_data.required,
+                                                 url.extract_query_parameter(&parameter_data.name).as_deref())
+                    }
                     _ => todo!()
                 }
             }
             _ => todo!(),
-        }
-    }
-}
-
-enum ParameterValidator {
-    Header {
-        jsonschema: serde_json::Value,
-        name: String,
-        required: bool,
-    },
-    Query {
-        jsonschema: serde_json::Value,
-        name: String,
-        required: bool,
-    },
-}
-
-impl ParameterValidator {
-    fn validate(&self, request: &Request) -> Result<bool, ()> {
-        match self {
-            ParameterValidator::Header {
-                jsonschema,
-                name,
-                required,
-            } => Self::validate_parameter(jsonschema, required, request.get_header(name)),
-            ParameterValidator::Query {
-                jsonschema,
-                name,
-                required,
-            } => {
-                let url = Url::parse(request.url()).unwrap();
-                Self::validate_parameter(jsonschema, required, Self::extract_query_parameter_from_url(&url, name).as_deref())
-            }
         }
     }
 
@@ -108,9 +70,15 @@ impl ParameterValidator {
 
         jsonschema.validates(parameter_value)
     }
+}
 
-    fn extract_query_parameter_from_url(url: &Url, name: &String) -> Option<String> {
-        match url.query_pairs().find(|(key, ..)| key == name) {
+trait ExtractQueryParameter {
+    fn extract_query_parameter(&self, name: &String) -> Option<String>;
+}
+
+impl ExtractQueryParameter for Url {
+    fn extract_query_parameter(&self, name: &String) -> Option<String> {
+        match self.query_pairs().find(|(key, ..)| key == name) {
             Some((.., value)) => Some(value.to_string()),
             None => None,
         }
