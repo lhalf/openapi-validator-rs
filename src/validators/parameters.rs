@@ -575,4 +575,38 @@ mod test_query_parameters {
             make_validator_from_spec(path_spec).validate_request(request)
         );
     }
+
+    #[test]
+    fn accept_a_request_given_a_component_schema_reference() {
+        let path_spec = indoc!(
+            r#"
+            paths:
+              /requires/query/parameter:
+                post:
+                  parameters:
+                    - in: query
+                      name: thing
+                      required: true
+                      schema:
+                        $ref: '#/components/schemas/Test'
+                  responses:
+                    200:
+                      description: API call successful
+
+            components:
+              schemas:
+                Test:
+                  type: boolean
+            "#
+        );
+        let request = Request {
+            url: "http://test.com/requires/query/parameter?thing=true".to_string(),
+            operation: "post".to_string(),
+            body: vec![],
+            headers: HashMap::new(),
+        };
+        assert!(make_validator_from_spec(path_spec)
+            .validate_request(request)
+            .is_ok());
+    }
 }
