@@ -58,8 +58,7 @@ impl ParameterValidator for openapiv3::Parameter {
         };
 
         match parameter_value {
-            None if !parameter_data.required => Ok(()),
-            Some(..) if !parameter_data.required => Ok(()),
+            _ if !parameter_data.required => Ok(()),
             None => Err(()),
             Some(parameter_value) => match parameter_data.format {
                 openapiv3::ParameterSchemaOrContent::Schema(schema) => schema
