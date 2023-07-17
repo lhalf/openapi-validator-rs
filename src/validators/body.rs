@@ -51,14 +51,10 @@ impl<'api> BodyValidator<'api> {
 fn validate_json_body(schema: &openapiv3::Schema, body: &[u8]) -> Result<(), ()> {
     let body = match std::str::from_utf8(body) {
         Ok(body) => body,
-        Err(..) => return Err(())
+        Err(..) => return Err(()),
     };
 
-    match schema.clone().to_json_schema().validates(body) {
-        Ok(true) => Ok(()),
-        Ok(false) => Err(()),
-        Err(..) => Err(())
-    }
+    schema.clone().to_json_schema().validates(body)
 }
 
 #[cfg(test)]

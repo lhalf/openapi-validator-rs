@@ -1,5 +1,5 @@
-use url::Url;
 use crate::item_or_fetch::ItemOrFetch;
+use url::Url;
 
 use super::content_type::ContentTypeValidator;
 use super::request::Request;
@@ -12,16 +12,13 @@ pub struct ParametersValidator<'api> {
 }
 
 impl<'api> ParametersValidator<'api> {
-    pub fn validate_parameters(
-        &self,
-        request: &Request,
-    ) -> Result<ContentTypeValidator, ()> {
+    pub fn validate_parameters(&self, request: &Request) -> Result<ContentTypeValidator, ()> {
         let all_parameters_valid = self.operation_spec.parameters.iter().all(|parameter| {
             parameter
                 .as_item()
                 .unwrap()
                 .validate(request, self.components)
-                .unwrap_or(false)
+                .is_ok()
         });
 
         if !all_parameters_valid {
@@ -36,11 +33,19 @@ impl<'api> ParametersValidator<'api> {
 }
 
 trait ParameterValidator {
-    fn validate<'api>(&self, request: &Request, components: &'api Option<openapiv3::Components>) -> Result<bool, ()>;
+    fn validate<'api>(
+        &self,
+        request: &Request,
+        components: &'api Option<openapiv3::Components>,
+    ) -> Result<(), ()>;
 }
 
 impl ParameterValidator for openapiv3::Parameter {
-    fn validate<'api>(&self, request: &Request, components: &'api Option<openapiv3::Components>) -> Result<bool, ()> {
+    fn validate<'api>(
+        &self,
+        request: &Request,
+        components: &'api Option<openapiv3::Components>,
+    ) -> Result<(), ()> {
         let parameter_data = self.clone().parameter_data();
 
         //this has already been checked so unwrap is fine
@@ -53,12 +58,16 @@ impl ParameterValidator for openapiv3::Parameter {
         };
 
         match parameter_value {
-            None => Ok(!*&parameter_data.required),
-            Some(..) if !parameter_data.required => Ok(true),
+            None if !parameter_data.required => Ok(()),
+            Some(..) if !parameter_data.required => Ok(()),
+            None => Err(()),
             Some(parameter_value) => match parameter_data.format {
-                openapiv3::ParameterSchemaOrContent::Schema(schema) => schema.item_or_fetch(components).to_json_schema().validates(&parameter_value),
-                _ => todo!()
-            }
+                openapiv3::ParameterSchemaOrContent::Schema(schema) => schema
+                    .item_or_fetch(components)
+                    .to_json_schema()
+                    .validates(&parameter_value),
+                _ => todo!(),
+            },
         }
     }
 }
