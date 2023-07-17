@@ -1,4 +1,5 @@
 use url::Url;
+use crate::item_or_fetch::ItemOrFetch;
 
 use super::content_type::ContentTypeValidator;
 use super::request::Request;
@@ -20,7 +21,7 @@ impl<'api> ParametersValidator<'api> {
             parameter
                 .as_item()
                 .unwrap()
-                .validate(request, url)
+                .validate(request, url, self.components)
                 .unwrap_or(false)
         });
 
@@ -36,15 +37,17 @@ impl<'api> ParametersValidator<'api> {
 }
 
 trait ParameterValidator {
-    fn validate(&self, request: &Request, url: &Url) -> Result<bool, ()>;
+    fn validate<'api>(&self, request: &Request, url: &Url, components: &'api Option<openapiv3::Components>) -> Result<bool, ()>;
 }
 
 impl ParameterValidator for openapiv3::Parameter {
-    fn validate(&self, request: &Request, url: &Url) -> Result<bool, ()> {
+    fn validate<'api>(&self, request: &Request, url: &Url, components: &'api Option<openapiv3::Components>) -> Result<bool, ()> {
         let parameter_data = self.clone().parameter_data();
 
         match &parameter_data.format {
-            openapiv3::ParameterSchemaOrContent::Schema(openapiv3::ReferenceOr::Item(schema)) => {
+            openapiv3::ParameterSchemaOrContent::Schema(ref_or) => {
+                let schema = ref_or.item_or_fetch(components);
+
                 let parameter_value = match self {
                     openapiv3::Parameter::Header { .. } => request.get_header(&parameter_data.name),
                     openapiv3::Parameter::Query { .. } => url.extract_query_parameter(&parameter_data.name),
@@ -282,6 +285,40 @@ mod test_header_parameters {
             Err(()),
             make_validator_from_spec(path_spec).validate_request(request)
         );
+    }
+
+    #[test]
+    fn accept_a_request_given_a_component_schema_reference() {
+        let path_spec = indoc!(
+            r#"
+            paths:
+              /requires/header/parameter:
+                post:
+                  parameters:
+                    - in: header
+                      name: thing
+                      required: true
+                      schema:
+                        $ref: '#/components/schemas/Test'
+                  responses:
+                    200:
+                      description: API call successful
+
+            components:
+              schemas:
+                Test:
+                  type: boolean
+            "#
+        );
+        let request = Request {
+            url: "http://test.com/requires/header/parameter".to_string(),
+            operation: "post".to_string(),
+            body: vec![],
+            headers: HashMap::from([("thing".to_string(), "true".to_string())]),
+        };
+        assert!(make_validator_from_spec(path_spec)
+            .validate_request(request)
+            .is_ok());
     }
 }
 
