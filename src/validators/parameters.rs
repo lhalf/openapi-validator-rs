@@ -54,13 +54,11 @@ impl ParameterValidator for openapiv3::Parameter {
                     _ => todo!(),
                 };
 
-                let parameter_value = match parameter_value {
-                    None => return Ok(!*&parameter_data.required),
-                    Some(..) if !parameter_data.required => return Ok(true),
-                    Some(parameter_value) => parameter_value,
-                };
-
-                schema.item_or_fetch(components).to_json_schema().validates(&parameter_value)
+                match parameter_value {
+                    None => Ok(!*&parameter_data.required),
+                    Some(..) if !parameter_data.required => Ok(true),
+                    Some(parameter_value) => schema.item_or_fetch(components).to_json_schema().validates(&parameter_value),
+                }
             }
             _ => todo!(),
         }
