@@ -11,12 +11,12 @@ pub struct ParametersValidator<'api> {
 }
 
 impl<'api> ParametersValidator<'api> {
-    pub fn validate_parameters(&self, request: &Request) -> Result<ContentTypeValidator, ()> {
+    pub fn validate_parameters(&self, request: &Request, url: &Url) -> Result<ContentTypeValidator, ()> {
         let all_parameters_valid = self.operation_spec.parameters.iter().all(|parameter| {
             parameter
                 .as_item()
                 .unwrap()
-                .validate(request).unwrap_or(false)
+                .validate(request, url).unwrap_or(false)
         });
 
         if !all_parameters_valid {
@@ -31,44 +31,30 @@ impl<'api> ParametersValidator<'api> {
 }
 
 trait ParameterValidator {
-    fn validate(&self, request: &Request) -> Result<bool, ()>;
-    fn validate_parameter(jsonschema: &serde_json::Value, required: &bool, parameter_value: Option<&str>) -> Result<bool, ()>;
+    fn validate(&self, request: &Request, url: &Url) -> Result<bool, ()>;
 }
 
 impl ParameterValidator for openapiv3::Parameter {
-    fn validate(&self, request: &Request) -> Result<bool, ()> {
+    fn validate(&self, request: &Request, url: &Url) -> Result<bool, ()> {
         let parameter_data = self.clone().parameter_data();
 
         match &parameter_data.format {
             openapiv3::ParameterSchemaOrContent::Schema(openapiv3::ReferenceOr::Item(schema)) => {
-                match self {
-                    openapiv3::Parameter::Header { .. } => Self::validate_parameter(&schema.to_json_schema(),
-                                                                                    &parameter_data.required,
-                                                                                    request.get_header(&parameter_data.name)),
-                    openapiv3::Parameter::Query { .. } => {
-                        let url = Url::parse(request.url()).unwrap();
-                        Self::validate_parameter(&schema.to_json_schema(),
-                                                 &parameter_data.required,
-                                                 url.extract_query_parameter(&parameter_data.name).as_deref())
-                    }
+                let parameter_value = match self {
+                    openapiv3::Parameter::Header { .. } => request.get_header(&parameter_data.name),
+                    openapiv3::Parameter::Query { .. } => url.extract_query_parameter(&parameter_data.name),
                     _ => todo!()
-                }
+                };
+
+                let parameter_value = match parameter_value {
+                    None => return Ok(!*&parameter_data.required),
+                    Some(parameter_value) => parameter_value,
+                };
+
+                schema.to_json_schema().validates(&parameter_value)
             }
             _ => todo!(),
         }
-    }
-
-    fn validate_parameter(
-        jsonschema: &serde_json::Value,
-        required: &bool,
-        parameter_value: Option<&str>,
-    ) -> Result<bool, ()> {
-        let parameter_value = match parameter_value {
-            None => return Ok(!*required),
-            Some(parameter_value) => parameter_value,
-        };
-
-        jsonschema.validates(parameter_value)
     }
 }
 

@@ -18,7 +18,7 @@ impl Validator {
         let url = self.parse_url(request.url())?;
         self.validate_path(url.path())?
             .validate_operation(request.operation())?
-            .validate_parameters(&request)?
+            .validate_parameters(&request, &url)?
             .validate_content_type(request.get_header("Content-Type"))?
             .validate_body(request.body())?;
         Ok(request)
@@ -69,8 +69,8 @@ impl Request {
         &self.body
     }
 
-    pub fn get_header(&self, key: &str) -> Option<&str> {
-        self.headers.get(key).map(String::as_str)
+    pub fn get_header(&self, key: &str) -> Option<String> {
+        self.headers.get(key).cloned()
     }
 }
 

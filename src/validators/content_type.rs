@@ -6,7 +6,7 @@ pub struct ContentTypeValidator<'api> {
 }
 
 impl<'api> ContentTypeValidator<'api> {
-    pub fn validate_content_type(&self, content_type: Option<&str>) -> Result<BodyValidator, ()> {
+    pub fn validate_content_type(&self, content_type: Option<String>) -> Result<BodyValidator, ()> {
         let body_spec = match self
             .operation_spec
             .request_body
@@ -22,11 +22,11 @@ impl<'api> ContentTypeValidator<'api> {
             _ => return Ok(BodyValidator::EmptyContentType { body_spec }),
         };
 
-        if !body_spec.content.contains_key(content_type) {
+        if !body_spec.content.contains_key(&content_type) {
             return Err(());
         }
 
-        match content_type {
+        match content_type.as_str() {
             "application/json" => Ok(BodyValidator::JSONBody {
                 body_spec,
                 components: self.components,
