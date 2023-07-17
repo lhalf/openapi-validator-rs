@@ -43,12 +43,12 @@ impl ParameterValidator for openapiv3::Parameter {
     fn validate<'api>(&self, request: &Request, components: &'api Option<openapiv3::Components>) -> Result<bool, ()> {
         let parameter_data = self.clone().parameter_data();
 
+        //this has already been checked so unwrap is fine
+        let url = Url::parse(request.url()).unwrap();
+
         let parameter_value = match self {
             openapiv3::Parameter::Header { .. } => request.get_header(&parameter_data.name),
-            openapiv3::Parameter::Query { .. } => match Url::parse(request.url()) {
-                Ok(url) => url.extract_query_parameter(&parameter_data.name),
-                Err(..) => return Err(())
-            }
+            openapiv3::Parameter::Query { .. } => url.extract_query_parameter(&parameter_data.name),
             _ => todo!(),
         };
 
