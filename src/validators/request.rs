@@ -18,7 +18,7 @@ impl Validator {
         let url = self.parse_url(request.url())?;
         self.validate_path(url.path())?
             .validate_operation(request.operation())?
-            .validate_parameters(&request, &url)?
+            .validate_parameters(&request)?
             .validate_content_type(request.get_header("Content-Type"))?
             .validate_body(request.body())?;
         Ok(request)

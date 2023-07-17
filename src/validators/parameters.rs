@@ -15,13 +15,12 @@ impl<'api> ParametersValidator<'api> {
     pub fn validate_parameters(
         &self,
         request: &Request,
-        url: &Url,
     ) -> Result<ContentTypeValidator, ()> {
         let all_parameters_valid = self.operation_spec.parameters.iter().all(|parameter| {
             parameter
                 .as_item()
                 .unwrap()
-                .validate(request, url, self.components)
+                .validate(request, self.components)
                 .unwrap_or(false)
         });
 
@@ -37,20 +36,21 @@ impl<'api> ParametersValidator<'api> {
 }
 
 trait ParameterValidator {
-    fn validate<'api>(&self, request: &Request, url: &Url, components: &'api Option<openapiv3::Components>) -> Result<bool, ()>;
+    fn validate<'api>(&self, request: &Request, components: &'api Option<openapiv3::Components>) -> Result<bool, ()>;
 }
 
 impl ParameterValidator for openapiv3::Parameter {
-    fn validate<'api>(&self, request: &Request, url: &Url, components: &'api Option<openapiv3::Components>) -> Result<bool, ()> {
+    fn validate<'api>(&self, request: &Request, components: &'api Option<openapiv3::Components>) -> Result<bool, ()> {
         let parameter_data = self.clone().parameter_data();
 
         match &parameter_data.format {
-            openapiv3::ParameterSchemaOrContent::Schema(ref_or) => {
-                let schema = ref_or.item_or_fetch(components);
-
+            openapiv3::ParameterSchemaOrContent::Schema(schema) => {
                 let parameter_value = match self {
                     openapiv3::Parameter::Header { .. } => request.get_header(&parameter_data.name),
-                    openapiv3::Parameter::Query { .. } => url.extract_query_parameter(&parameter_data.name),
+                    openapiv3::Parameter::Query { .. } => match Url::parse(request.url()) {
+                        Ok(url) => url.extract_query_parameter(&parameter_data.name),
+                        Err(..) => return Err(())
+                    }
                     _ => todo!(),
                 };
 
@@ -60,7 +60,7 @@ impl ParameterValidator for openapiv3::Parameter {
                     Some(parameter_value) => parameter_value,
                 };
 
-                schema.to_json_schema().validates(&parameter_value)
+                schema.item_or_fetch(components).to_json_schema().validates(&parameter_value)
             }
             _ => todo!(),
         }
