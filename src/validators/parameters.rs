@@ -11,12 +11,17 @@ pub struct ParametersValidator<'api> {
 }
 
 impl<'api> ParametersValidator<'api> {
-    pub fn validate_parameters(&self, request: &Request, url: &Url) -> Result<ContentTypeValidator, ()> {
+    pub fn validate_parameters(
+        &self,
+        request: &Request,
+        url: &Url,
+    ) -> Result<ContentTypeValidator, ()> {
         let all_parameters_valid = self.operation_spec.parameters.iter().all(|parameter| {
             parameter
                 .as_item()
                 .unwrap()
-                .validate(request, url).unwrap_or(false)
+                .validate(request, url)
+                .unwrap_or(false)
         });
 
         if !all_parameters_valid {
@@ -42,12 +47,15 @@ impl ParameterValidator for openapiv3::Parameter {
             openapiv3::ParameterSchemaOrContent::Schema(openapiv3::ReferenceOr::Item(schema)) => {
                 let parameter_value = match self {
                     openapiv3::Parameter::Header { .. } => request.get_header(&parameter_data.name),
-                    openapiv3::Parameter::Query { .. } => url.extract_query_parameter(&parameter_data.name),
-                    _ => todo!()
+                    openapiv3::Parameter::Query { .. } => {
+                        url.extract_query_parameter(&parameter_data.name)
+                    }
+                    _ => todo!(),
                 };
 
                 let parameter_value = match parameter_value {
                     None => return Ok(!*&parameter_data.required),
+                    Some(..) if !parameter_data.required => return Ok(true),
                     Some(parameter_value) => parameter_value,
                 };
 
@@ -411,6 +419,64 @@ mod test_query_parameters {
     }
 
     #[test]
+    fn accept_a_request_with_not_present_optional_query_parameter() {
+        let path_spec = indoc!(
+            r#"
+            paths:
+              /optional/query/parameter:
+                post:
+                  parameters:
+                    - in: query
+                      name: thing
+                      required: false
+                      schema:
+                        type: boolean
+                  responses:
+                    200:
+                      description: API call successful
+            "#
+        );
+        let request = Request {
+            url: "http://test.com/optional/query/parameter".to_string(),
+            operation: "post".to_string(),
+            body: vec![],
+            headers: HashMap::new(),
+        };
+        assert!(make_validator_from_spec(path_spec)
+            .validate_request(request)
+            .is_ok());
+    }
+
+    #[test]
+    fn accept_a_request_with_invalid_optional_query_parameter() {
+        let path_spec = indoc!(
+            r#"
+            paths:
+              /optional/query/parameter:
+                post:
+                  parameters:
+                    - in: query
+                      name: thing
+                      required: false
+                      schema:
+                        type: boolean
+                  responses:
+                    200:
+                      description: API call successful
+            "#
+        );
+        let request = Request {
+            url: "http://test.com/optional/query/parameter?thing=123".to_string(),
+            operation: "post".to_string(),
+            body: vec![],
+            headers: HashMap::new(),
+        };
+        assert!(make_validator_from_spec(path_spec)
+            .validate_request(request)
+            .is_ok());
+    }
+
+    #[test]
     fn accept_a_request_with_multiple_valid_query_parameter() {
         let path_spec = indoc!(
             r#"
@@ -434,7 +500,8 @@ mod test_query_parameters {
             "#
         );
         let request = Request {
-            url: "http://test.com/requires/multiple/query/parameter?thing=true&another=\"cheese\"".to_string(),
+            url: "http://test.com/requires/multiple/query/parameter?thing=true&another=\"cheese\""
+                .to_string(),
             operation: "post".to_string(),
             body: vec![],
             headers: HashMap::new(),
