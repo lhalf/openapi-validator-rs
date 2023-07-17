@@ -47,9 +47,7 @@ impl ParameterValidator for openapiv3::Parameter {
             openapiv3::ParameterSchemaOrContent::Schema(openapiv3::ReferenceOr::Item(schema)) => {
                 let parameter_value = match self {
                     openapiv3::Parameter::Header { .. } => request.get_header(&parameter_data.name),
-                    openapiv3::Parameter::Query { .. } => {
-                        url.extract_query_parameter(&parameter_data.name)
-                    }
+                    openapiv3::Parameter::Query { .. } => url.extract_query_parameter(&parameter_data.name),
                     _ => todo!(),
                 };
 
