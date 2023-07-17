@@ -217,6 +217,64 @@ mod test_header_parameters {
     }
 
     #[test]
+    fn accept_a_request_with_not_present_optional_header_parameter() {
+        let path_spec = indoc!(
+            r#"
+            paths:
+              /optional/header/parameter:
+                post:
+                  parameters:
+                    - in: header
+                      name: thing
+                      required: false
+                      schema:
+                        type: boolean
+                  responses:
+                    200:
+                      description: API call successful
+            "#
+        );
+        let request = Request {
+            url: "http://test.com/optional/header/parameter".to_string(),
+            operation: "post".to_string(),
+            body: vec![],
+            headers: HashMap::new(),
+        };
+        assert!(make_validator_from_spec(path_spec)
+            .validate_request(request)
+            .is_ok());
+    }
+
+    #[test]
+    fn accept_a_request_with_invalid_optional_header_parameter() {
+        let path_spec = indoc!(
+            r#"
+            paths:
+              /optional/header/parameter:
+                post:
+                  parameters:
+                    - in: header
+                      name: thing
+                      required: false
+                      schema:
+                        type: boolean
+                  responses:
+                    200:
+                      description: API call successful
+            "#
+        );
+        let request = Request {
+            url: "http://test.com/optional/header/parameter".to_string(),
+            operation: "post".to_string(),
+            body: vec![],
+            headers: HashMap::from([("thing".to_string(), "not_valid".to_string())]),
+        };
+        assert!(make_validator_from_spec(path_spec)
+            .validate_request(request)
+            .is_ok());
+    }
+
+    #[test]
     fn accept_a_request_with_multiple_valid_header_parameters() {
         let path_spec = indoc!(
             r#"
@@ -275,7 +333,7 @@ mod test_header_parameters {
             url: "http://test.com/requires/header/parameter".to_string(),
             operation: "post".to_string(),
             body: vec![],
-            headers: HashMap::from([("thing".to_string(), "p".to_string())]),
+            headers: HashMap::from([("thing".to_string(), "not_valid".to_string())]),
         };
         assert_eq!(
             Err(()),
@@ -561,7 +619,7 @@ mod test_query_parameters {
             "#
         );
         let request = Request {
-            url: "http://test.com/requires/multiple/query/parameter?another=cheese".to_string(),
+            url: "http://test.com/requires/multiple/query/parameter?another=not_valid".to_string(),
             operation: "post".to_string(),
             body: vec![],
             headers: HashMap::new(),
