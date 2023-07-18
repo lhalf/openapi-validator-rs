@@ -1,3 +1,4 @@
+use regex::Regex;
 use std::collections::HashMap;
 use url::Url;
 
@@ -27,16 +28,28 @@ impl Validator {
     fn parse_url(&self, url: &str) -> Result<Url, ()> {
         match Url::parse(url) {
             Ok(url) => Ok(url),
-            Err(..) => Err(())
+            Err(..) => Err(()),
         }
     }
 
-    fn validate_path(&self, path: &str) -> Result<OperationValidator, ()> {
+    fn validate_path(&self, request_path: &str) -> Result<OperationValidator, ()> {
+        let mut matching_path = "";
+        for path in self.api.paths.paths.keys() {
+            if path
+                .to_component_list()
+                .iter()
+                .zip(request_path.to_string().to_str_list().iter())
+                .all(|(spec_segment, request_segment)| spec_segment.matches(request_segment))
+            {
+                matching_path = path
+            }
+        }
+
         if let Some(path_spec) = self
             .api
             .paths
             .paths
-            .get(path)
+            .get(matching_path)
             .and_then(openapiv3::ReferenceOr::as_item)
         {
             return Ok(OperationValidator {
@@ -45,6 +58,50 @@ impl Validator {
             });
         }
         Err(())
+    }
+}
+
+#[allow(dead_code)]
+#[derive(Debug)]
+enum Segment<'path> {
+    Fixed { literal: &'path str },
+    Parameter { name: &'path str },
+}
+
+impl Segment<'_> {
+    fn matches(&self, input: &str) -> bool {
+        match self {
+            Segment::Fixed { literal } => literal == &input,
+            Segment::Parameter { .. } => true,
+        }
+    }
+}
+
+trait SplitPath {
+    fn to_component_list(&self) -> Vec<Segment>;
+    fn to_str_list(&self) -> Vec<&str>;
+}
+
+impl SplitPath for String {
+    fn to_component_list(&self) -> Vec<Segment> {
+        self.to_str_list()
+            .iter()
+            .map(|segment| {
+                let re = Regex::new(r"^\{[^}]*\}$").unwrap();
+                match re.is_match(segment) {
+                    true => Segment::Parameter {
+                        name: &segment[1..segment.len() - 1],
+                    },
+                    false => Segment::Fixed { literal: segment },
+                }
+            })
+            .collect::<Vec<Segment>>()
+    }
+
+    fn to_str_list(&self) -> Vec<&str> {
+        self.split('/')
+            .filter(|component| !component.is_empty())
+            .collect::<Vec<&str>>()
     }
 }
 
@@ -85,7 +142,7 @@ pub fn make_validator_from_spec(path_spec: &str) -> Validator {
                 title: Swagger ReST Article
             "#
     )
-        .to_string()
+    .to_string()
         + path_spec;
     Validator::new(serde_yaml::from_str(&openapi).unwrap())
 }
@@ -94,11 +151,11 @@ pub fn make_validator_from_spec(path_spec: &str) -> Validator {
 pub fn make_validator() -> Result<Validator, ()> {
     let spec = match std::fs::read_to_string("./specs/openapi.yaml") {
         Ok(spec) => spec,
-        Err(..) => return Err(())
+        Err(..) => return Err(()),
     };
     let api = match serde_yaml::from_str(&spec) {
         Ok(api) => api,
-        Err(..) => return Err(())
+        Err(..) => return Err(()),
     };
     Ok(Validator::new(api))
 }
