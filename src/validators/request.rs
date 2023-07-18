@@ -33,30 +33,21 @@ impl Validator {
     }
 
     fn validate_path(&self, request_path: &str) -> Result<OperationValidator, ()> {
-        let mut matching_path = "";
-        for path in self.api.paths.paths.keys() {
-            if path
-                .to_component_list()
-                .iter()
-                .zip(request_path.to_string().to_str_list().iter())
-                .all(|(spec_segment, request_segment)| spec_segment.matches(request_segment))
-            {
-                matching_path = path
-            }
-        }
+        let api_paths = &self.api.paths.paths;
 
-        if let Some(path_spec) = self
-            .api
-            .paths
-            .paths
-            .get(matching_path)
-            .and_then(openapiv3::ReferenceOr::as_item)
-        {
+        let matching_path = api_paths.keys().find(|path| {
+            path.to_component_list()
+                .matches(request_path.to_string().to_str_list())
+        });
+
+        if let Some(path) = matching_path {
             return Ok(OperationValidator {
-                path_spec,
+                //first unwrap is fine as we know path exists, second replace when references are supported
+                path_spec: api_paths.get(path).unwrap().as_item().unwrap(),
                 components: &self.api.components,
             });
         }
+
         Err(())
     }
 }
@@ -68,10 +59,25 @@ enum Segment<'path> {
     Parameter { name: &'path str },
 }
 
+trait MatchesPath {
+    fn matches(&self, request_segments: Vec<&str>) -> bool;
+}
+
+impl MatchesPath for Vec<Segment<'_>> {
+    fn matches(&self, request_segments: Vec<&str>) -> bool {
+        if self.len() != request_segments.len() {
+            return false;
+        }
+        self.iter()
+            .zip(request_segments.iter())
+            .all(|(spec_segment, request_segment)| spec_segment.matches(request_segment))
+    }
+}
+
 impl Segment<'_> {
-    fn matches(&self, input: &str) -> bool {
+    fn matches(&self, request_segment: &str) -> bool {
         match self {
-            Segment::Fixed { literal } => literal == &input,
+            Segment::Fixed { literal } => literal == &request_segment,
             Segment::Parameter { .. } => true,
         }
     }
