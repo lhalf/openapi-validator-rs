@@ -42,7 +42,7 @@ impl Validator {
 
         if let Some(path) = matching_path {
             return Ok(OperationValidator {
-                //first unwrap is fine as we know path exists, second replace when references are supported
+                //unwrap as we currently don't have references
                 path_spec: api_paths
                     .get(path)
                     .and_then(openapiv3::ReferenceOr::as_item)
