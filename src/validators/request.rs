@@ -48,6 +48,9 @@ impl Validator {
                     .and_then(openapiv3::ReferenceOr::as_item)
                     .unwrap(),
                 components: &self.api.components,
+                path_parameters: path
+                    .to_component_list()
+                    .extract_path_parameters(request_path.to_string().to_str_list()),
             });
         }
 
@@ -62,6 +65,15 @@ enum Segment<'path> {
     Parameter { name: &'path str },
 }
 
+impl Segment<'_> {
+    fn matches(&self, request_segment: &str) -> bool {
+        match self {
+            Segment::Fixed { literal } => literal == &request_segment,
+            Segment::Parameter { .. } => true,
+        }
+    }
+}
+
 trait MatchesPath {
     fn matches(&self, request_segments: Vec<&str>) -> bool;
 }
@@ -74,15 +86,6 @@ impl MatchesPath for Vec<Segment<'_>> {
         self.iter()
             .zip(request_segments.iter())
             .all(|(spec_segment, request_segment)| spec_segment.matches(request_segment))
-    }
-}
-
-impl Segment<'_> {
-    fn matches(&self, request_segment: &str) -> bool {
-        match self {
-            Segment::Fixed { literal } => literal == &request_segment,
-            Segment::Parameter { .. } => true,
-        }
     }
 }
 
@@ -111,6 +114,30 @@ impl SplitPath for String {
         self.split('/')
             .filter(|component| !component.is_empty())
             .collect::<Vec<&str>>()
+    }
+}
+
+trait ExtractPathParameters {
+    fn extract_path_parameters<'path>(
+        &'path self,
+        request_segments: Vec<&'path str>,
+    ) -> HashMap<String, String>;
+}
+
+impl ExtractPathParameters for Vec<Segment<'_>> {
+    fn extract_path_parameters<'path>(
+        &'path self,
+        request_segments: Vec<&'path str>,
+    ) -> HashMap<String, String> {
+        self.iter()
+            .zip(request_segments.iter())
+            .filter_map(|(spec_segment, request_segment)| match spec_segment {
+                Segment::Parameter { name } => {
+                    Some((name.to_string(), request_segment.to_string()))
+                }
+                Segment::Fixed { .. } => None,
+            })
+            .collect()
     }
 }
 

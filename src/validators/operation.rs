@@ -1,12 +1,14 @@
 use super::parameters::ParametersValidator;
+use std::collections::HashMap;
 
 pub struct OperationValidator<'api> {
     pub path_spec: &'api openapiv3::PathItem,
     pub components: &'api Option<openapiv3::Components>,
+    pub path_parameters: HashMap<String, String>,
 }
 
 impl<'api> OperationValidator<'api> {
-    pub fn validate_operation(&self, operation: &str) -> Result<ParametersValidator, ()> {
+    pub fn validate_operation(self, operation: &str) -> Result<ParametersValidator<'api>, ()> {
         let operation_spec = match operation {
             "get" => self.path_spec.get.as_ref().ok_or(()),
             "put" => self.path_spec.put.as_ref().ok_or(()),
@@ -17,14 +19,15 @@ impl<'api> OperationValidator<'api> {
         Ok(ParametersValidator {
             operation_spec,
             components: self.components,
+            path_parameters: self.path_parameters,
         })
     }
 }
 
 #[cfg(test)]
 mod test_operations {
-    use crate::validators::request::Request;
     use crate::validators::request::make_validator_from_spec;
+    use crate::validators::request::Request;
     use indoc::indoc;
     use std::collections::HashMap;
 

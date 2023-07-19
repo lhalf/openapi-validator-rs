@@ -1,23 +1,25 @@
-use crate::item_or_fetch::ItemOrFetch;
+use std::collections::HashMap;
 use url::Url;
 
 use super::content_type::ContentTypeValidator;
 use super::request::Request;
+use crate::item_or_fetch::ItemOrFetch;
 use crate::to_jsonschema::ToJSONSchema;
 use crate::validators::jsonschema::JSONSchemaValidator;
 
 pub struct ParametersValidator<'api> {
     pub operation_spec: &'api openapiv3::Operation,
     pub components: &'api Option<openapiv3::Components>,
+    pub path_parameters: HashMap<String, String>,
 }
 
 impl<'api> ParametersValidator<'api> {
-    pub fn validate_parameters(&self, request: &Request) -> Result<ContentTypeValidator, ()> {
+    pub fn validate_parameters(self, request: &Request) -> Result<ContentTypeValidator<'api>, ()> {
         let all_parameters_valid = self.operation_spec.parameters.iter().all(|parameter| {
             parameter
                 .as_item()
                 .unwrap()
-                .validate(request, self.components)
+                .validate(request, self.components, &self.path_parameters)
                 .is_ok()
         });
 
@@ -37,6 +39,7 @@ trait ParameterValidator {
         &self,
         request: &Request,
         components: &'api Option<openapiv3::Components>,
+        path_parameters: &HashMap<String, String>,
     ) -> Result<(), ()>;
 }
 
@@ -45,6 +48,7 @@ impl ParameterValidator for openapiv3::Parameter {
         &self,
         request: &Request,
         components: &'api Option<openapiv3::Components>,
+        path_parameters: &HashMap<String, String>,
     ) -> Result<(), ()> {
         let parameter_data = self.clone().parameter_data();
 
@@ -54,6 +58,7 @@ impl ParameterValidator for openapiv3::Parameter {
         let parameter_value = match self {
             openapiv3::Parameter::Header { .. } => request.get_header(&parameter_data.name),
             openapiv3::Parameter::Query { .. } => url.extract_query_parameter(&parameter_data.name),
+            openapiv3::Parameter::Path { .. } => path_parameters.get(&parameter_data.name).cloned(),
             _ => todo!(),
         };
 
@@ -670,5 +675,73 @@ mod test_query_parameters {
         assert!(make_validator_from_spec(path_spec)
             .validate_request(request)
             .is_ok());
+    }
+}
+
+#[cfg(test)]
+mod test_path_parameters {
+    use crate::validators::request::make_validator_from_spec;
+    use crate::validators::request::Request;
+    use indoc::indoc;
+    use std::collections::HashMap;
+
+    #[test]
+    fn reject_a_request_with_missing_path_parameter() {
+        let path_spec = indoc!(
+            r#"
+            paths:
+              /requires/path/parameter/{here}:
+                post:
+                  parameters:
+                    - in: path
+                      name: here
+                      required: true
+                      schema:
+                        type: boolean
+                  responses:
+                    200:
+                      description: API call successful
+            "#
+        );
+        let request = Request {
+            url: "http://test.com/requires/path/parameter".to_string(),
+            operation: "post".to_string(),
+            body: vec![],
+            headers: HashMap::new(),
+        };
+        assert_eq!(
+            Err(()),
+            make_validator_from_spec(path_spec).validate_request(request)
+        );
+    }
+
+    #[test]
+    fn reject_a_request_with_invalid_path_parameter() {
+        let path_spec = indoc!(
+            r#"
+            paths:
+              /requires/path/parameter/{here}:
+                post:
+                  parameters:
+                    - in: path
+                      name: here
+                      required: true
+                      schema:
+                        type: boolean
+                  responses:
+                    200:
+                      description: API call successful
+            "#
+        );
+        let request = Request {
+            url: "http://test.com/requires/path/parameter/123".to_string(),
+            operation: "post".to_string(),
+            body: vec![],
+            headers: HashMap::new(),
+        };
+        assert_eq!(
+            Err(()),
+            make_validator_from_spec(path_spec).validate_request(request)
+        );
     }
 }
