@@ -35,9 +35,9 @@ impl Validator {
     fn validate_path(&self, request_path: &str) -> Result<OperationValidator, ()> {
         let api_paths = &self.api.paths.paths;
 
-        let matching_path = api_paths
-            .keys()
-            .find(|path| Segment::segment_list_from_str(path).matches(split_path(request_path)));
+        let matching_path = api_paths.keys().find(|path| {
+            Segment::list_matches(Segment::list_from_str(path), split_path(request_path))
+        });
 
         if let Some(path) = matching_path {
             return Ok(OperationValidator {
@@ -48,7 +48,7 @@ impl Validator {
                     .unwrap(),
                 components: &self.api.components,
                 path_parameters: extract_path_parameters(
-                    Segment::segment_list_from_str(path),
+                    Segment::list_from_str(path),
                     split_path(request_path),
                 ),
             });
@@ -73,7 +73,7 @@ impl<'path> Segment<'path> {
         }
     }
 
-    fn segment_list_from_str(path: &'path str) -> Vec<Self> {
+    fn list_from_str(path: &'path str) -> Vec<Self> {
         split_path(path)
             .iter()
             .map(|segment| {
@@ -87,27 +87,22 @@ impl<'path> Segment<'path> {
             })
             .collect::<Vec<Self>>()
     }
+
+    fn list_matches(spec_segments: Vec<Segment>, request_segments: Vec<&str>) -> bool {
+        if spec_segments.len() != request_segments.len() {
+            return false;
+        }
+        spec_segments
+            .iter()
+            .zip(request_segments.iter())
+            .all(|(spec_segment, request_segment)| spec_segment.matches(request_segment))
+    }
 }
 
 fn split_path(path: &str) -> Vec<&str> {
     path.split('/')
         .filter(|component| !component.is_empty())
         .collect::<Vec<&str>>()
-}
-
-trait MatchesPath {
-    fn matches(&self, request_segments: Vec<&str>) -> bool;
-}
-
-impl MatchesPath for Vec<Segment<'_>> {
-    fn matches(&self, request_segments: Vec<&str>) -> bool {
-        if self.len() != request_segments.len() {
-            return false;
-        }
-        self.iter()
-            .zip(request_segments.iter())
-            .all(|(spec_segment, request_segment)| spec_segment.matches(request_segment))
-    }
 }
 
 fn extract_path_parameters(
