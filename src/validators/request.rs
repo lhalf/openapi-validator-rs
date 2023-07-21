@@ -48,9 +48,10 @@ impl Validator {
                     .and_then(openapiv3::ReferenceOr::as_item)
                     .unwrap(),
                 components: &self.api.components,
-                path_parameters: path
-                    .to_component_list()
-                    .extract_path_parameters(request_path.to_string().to_str_list()),
+                path_parameters: extract_path_parameters(
+                    path.to_component_list(),
+                    request_path.to_string().to_str_list(),
+                ),
             });
         }
 
@@ -117,28 +118,18 @@ impl SplitPath for String {
     }
 }
 
-trait ExtractPathParameters {
-    fn extract_path_parameters<'path>(
-        &'path self,
-        request_segments: Vec<&'path str>,
-    ) -> HashMap<String, String>;
-}
-
-impl ExtractPathParameters for Vec<Segment<'_>> {
-    fn extract_path_parameters<'path>(
-        &'path self,
-        request_segments: Vec<&'path str>,
-    ) -> HashMap<String, String> {
-        self.iter()
-            .zip(request_segments.iter())
-            .filter_map(|(spec_segment, request_segment)| match spec_segment {
-                Segment::Parameter { name } => {
-                    Some((name.to_string(), request_segment.to_string()))
-                }
-                Segment::Fixed { .. } => None,
-            })
-            .collect()
-    }
+fn extract_path_parameters(
+    spec_segments: Vec<Segment>,
+    request_segments: Vec<&str>,
+) -> HashMap<String, String> {
+    spec_segments
+        .iter()
+        .zip(request_segments.iter())
+        .filter_map(|(spec_segment, request_segment)| match spec_segment {
+            Segment::Parameter { name } => Some((name.to_string(), request_segment.to_string())),
+            Segment::Fixed { .. } => None,
+        })
+        .collect()
 }
 
 #[derive(Debug, PartialEq)]
