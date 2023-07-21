@@ -35,10 +35,9 @@ impl Validator {
     fn validate_path(&self, request_path: &str) -> Result<OperationValidator, ()> {
         let api_paths = &self.api.paths.paths;
 
-        let matching_path = api_paths.keys().find(|path| {
-            path.to_component_list()
-                .matches(request_path.to_string().to_str_list())
-        });
+        let matching_path = api_paths
+            .keys()
+            .find(|path| Segment::segment_list_from_str(path).matches(split_path(request_path)));
 
         if let Some(path) = matching_path {
             return Ok(OperationValidator {
@@ -49,8 +48,8 @@ impl Validator {
                     .unwrap(),
                 components: &self.api.components,
                 path_parameters: extract_path_parameters(
-                    path.to_component_list(),
-                    request_path.to_string().to_str_list(),
+                    Segment::segment_list_from_str(path),
+                    split_path(request_path),
                 ),
             });
         }
@@ -66,13 +65,34 @@ enum Segment<'path> {
     Parameter { name: &'path str },
 }
 
-impl Segment<'_> {
+impl<'path> Segment<'path> {
     fn matches(&self, request_segment: &str) -> bool {
         match self {
             Segment::Fixed { literal } => literal == &request_segment,
             Segment::Parameter { .. } => true,
         }
     }
+
+    fn segment_list_from_str(path: &'path str) -> Vec<Self> {
+        split_path(path)
+            .iter()
+            .map(|segment| {
+                let re = Regex::new(r"^\{[^}]*\}$").unwrap();
+                match re.is_match(segment) {
+                    true => Self::Parameter {
+                        name: &segment[1..segment.len() - 1],
+                    },
+                    false => Self::Fixed { literal: segment },
+                }
+            })
+            .collect::<Vec<Self>>()
+    }
+}
+
+fn split_path(path: &str) -> Vec<&str> {
+    path.split('/')
+        .filter(|component| !component.is_empty())
+        .collect::<Vec<&str>>()
 }
 
 trait MatchesPath {
@@ -87,34 +107,6 @@ impl MatchesPath for Vec<Segment<'_>> {
         self.iter()
             .zip(request_segments.iter())
             .all(|(spec_segment, request_segment)| spec_segment.matches(request_segment))
-    }
-}
-
-trait SplitPath {
-    fn to_component_list(&self) -> Vec<Segment>;
-    fn to_str_list(&self) -> Vec<&str>;
-}
-
-impl SplitPath for String {
-    fn to_component_list(&self) -> Vec<Segment> {
-        self.to_str_list()
-            .iter()
-            .map(|segment| {
-                let re = Regex::new(r"^\{[^}]*\}$").unwrap();
-                match re.is_match(segment) {
-                    true => Segment::Parameter {
-                        name: &segment[1..segment.len() - 1],
-                    },
-                    false => Segment::Fixed { literal: segment },
-                }
-            })
-            .collect::<Vec<Segment>>()
-    }
-
-    fn to_str_list(&self) -> Vec<&str> {
-        self.split('/')
-            .filter(|component| !component.is_empty())
-            .collect::<Vec<&str>>()
     }
 }
 
