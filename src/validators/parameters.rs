@@ -63,7 +63,7 @@ impl ParameterValidator for openapiv3::Parameter {
         };
 
         match parameter_value {
-            _ if !parameter_data.required => Ok(()),
+            None if !parameter_data.required => Ok(()),
             None => Err(()),
             Some(parameter_value) => match parameter_data.format {
                 openapiv3::ParameterSchemaOrContent::Schema(schema) => schema
@@ -259,7 +259,7 @@ mod test_header_parameters {
     }
 
     #[test]
-    fn accept_a_request_with_invalid_optional_header_parameter() {
+    fn reject_a_request_with_invalid_optional_header_parameter() {
         let path_spec = indoc!(
             r#"
             paths:
@@ -282,9 +282,10 @@ mod test_header_parameters {
             body: vec![],
             headers: HashMap::from([("thing".to_string(), "not_valid".to_string())]),
         };
-        assert!(make_validator_from_spec(path_spec)
-            .validate_request(request)
-            .is_ok());
+        assert_eq!(
+            Err(()),
+            make_validator_from_spec(path_spec).validate_request(request)
+        );
     }
 
     #[test]
@@ -550,7 +551,7 @@ mod test_query_parameters {
     }
 
     #[test]
-    fn accept_a_request_with_invalid_optional_query_parameter() {
+    fn reject_a_request_with_invalid_optional_query_parameter() {
         let path_spec = indoc!(
             r#"
             paths:
@@ -573,9 +574,10 @@ mod test_query_parameters {
             body: vec![],
             headers: HashMap::new(),
         };
-        assert!(make_validator_from_spec(path_spec)
-            .validate_request(request)
-            .is_ok());
+        assert_eq!(
+            Err(()),
+            make_validator_from_spec(path_spec).validate_request(request)
+        );
     }
 
     #[test]
