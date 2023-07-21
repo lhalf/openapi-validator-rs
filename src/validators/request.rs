@@ -35,22 +35,19 @@ impl Validator {
     fn validate_path(&self, request_path: &str) -> Result<OperationValidator, ()> {
         let request_segments = split_path(request_path);
 
-        for (spec_path, path_spec) in &self.api.paths.paths {
-            let spec_segments = Segment::list_from_str(spec_path);
-
-            if !Segment::list_matches(&spec_segments, &request_segments) {
-                continue;
-            }
-
-            return Ok(OperationValidator {
+        self.api
+            .paths
+            .paths
+            .iter()
+            .map(|(spec_path, path_spec)| (Segment::list_from_str(spec_path), path_spec))
+            .find(|(spec_segments, _)| Segment::list_matches(spec_segments, &request_segments))
+            .map(|(spec_segments, path_spec)| OperationValidator {
                 //unwrap as we currently don't have references
                 path_spec: path_spec.as_item().unwrap(),
                 components: &self.api.components,
                 path_parameters: extract_path_parameters(spec_segments, request_segments),
-            });
-        }
-
-        Err(())
+            })
+            .ok_or(())
     }
 }
 
