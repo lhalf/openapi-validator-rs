@@ -33,24 +33,20 @@ impl Validator {
     }
 
     fn validate_path(&self, request_path: &str) -> Result<OperationValidator, ()> {
-        let api_paths = &self.api.paths.paths;
+        let request_segments = split_path(request_path);
 
-        let matching_path = api_paths.keys().find(|path| {
-            Segment::list_matches(Segment::list_from_str(path), split_path(request_path))
-        });
+        for (spec_path, path_spec) in &self.api.paths.paths {
+            let spec_segments = Segment::list_from_str(spec_path);
 
-        if let Some(path) = matching_path {
+            if !Segment::list_matches(&spec_segments, &request_segments) {
+                continue;
+            }
+
             return Ok(OperationValidator {
                 //unwrap as we currently don't have references
-                path_spec: api_paths
-                    .get(path)
-                    .and_then(openapiv3::ReferenceOr::as_item)
-                    .unwrap(),
+                path_spec: path_spec.as_item().unwrap(),
                 components: &self.api.components,
-                path_parameters: extract_path_parameters(
-                    Segment::list_from_str(path),
-                    split_path(request_path),
-                ),
+                path_parameters: extract_path_parameters(spec_segments, request_segments),
             });
         }
 
@@ -88,7 +84,7 @@ impl<'path> Segment<'path> {
             .collect::<Vec<Self>>()
     }
 
-    fn list_matches(spec_segments: Vec<Segment>, request_segments: Vec<&str>) -> bool {
+    fn list_matches(spec_segments: &[Segment], request_segments: &[&str]) -> bool {
         if spec_segments.len() != request_segments.len() {
             return false;
         }
