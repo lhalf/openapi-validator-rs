@@ -816,4 +816,33 @@ mod test_path_parameters {
             make_validator_from_spec(path_spec).validate_request(request)
         );
     }
+
+    #[test]
+    fn accept_a_request_with_valid_path_parameter() {
+        let path_spec = indoc!(
+            r#"
+            paths:
+              /requires/path/parameter/{here}:
+                post:
+                  parameters:
+                    - in: path
+                      name: here
+                      required: true
+                      schema:
+                        type: boolean
+                  responses:
+                    200:
+                      description: API call successful
+            "#
+        );
+        let request = Request {
+            url: "http://test.com/requires/path/parameter/true".to_string(),
+            operation: "post".to_string(),
+            body: vec![],
+            headers: HashMap::new(),
+        };
+        assert!(make_validator_from_spec(path_spec)
+            .validate_request(request)
+            .is_ok());
+    }
 }
