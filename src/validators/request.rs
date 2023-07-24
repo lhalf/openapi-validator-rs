@@ -70,7 +70,7 @@ impl<'path> Segment<'path> {
         split_path(path)
             .iter()
             .map(|segment| {
-                let re = Regex::new(r"^\{[^}]*\}$").unwrap();
+                let re = Regex::new(r"^\{[^}]*}$").unwrap();
                 match re.is_match(segment) {
                     true => Self::Parameter {
                         name: &segment[1..segment.len() - 1],
@@ -149,7 +149,7 @@ pub fn make_validator_from_spec(path_spec: &str) -> Validator {
                 title: Swagger ReST Article
             "#
     )
-    .to_string()
+        .to_string()
         + path_spec;
     Validator::new(serde_yaml::from_str(&openapi).unwrap())
 }
