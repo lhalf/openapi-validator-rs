@@ -32,7 +32,10 @@ impl Validator {
         }
     }
 
-    fn validate_path(&self, request_path: &str) -> Result<OperationValidator, ()> {
+    fn validate_path<'api, 'request>(
+        &'api self,
+        request_path: &'request str,
+    ) -> Result<OperationValidator<'api, 'request>, ()> {
         let request_segments = split_path(request_path);
 
         self.api
@@ -98,15 +101,15 @@ fn split_path(path: &str) -> Vec<&str> {
         .collect::<Vec<&str>>()
 }
 
-fn extract_path_parameters(
-    spec_segments: Vec<Segment>,
-    request_segments: Vec<&str>,
-) -> HashMap<String, String> {
+fn extract_path_parameters<'api, 'request>(
+    spec_segments: Vec<Segment<'api>>,
+    request_segments: Vec<&'request str>,
+) -> HashMap<&'api str, &'request str> {
     spec_segments
         .iter()
         .zip(request_segments.iter())
         .filter_map(|(spec_segment, request_segment)| match spec_segment {
-            Segment::Parameter { name } => Some((name.to_string(), request_segment.to_string())),
+            Segment::Parameter { name } => Some((*name, *request_segment)),
             Segment::Fixed { .. } => None,
         })
         .collect()
@@ -149,7 +152,7 @@ pub fn make_validator_from_spec(path_spec: &str) -> Validator {
                 title: Swagger ReST Article
             "#
     )
-        .to_string()
+    .to_string()
         + path_spec;
     Validator::new(serde_yaml::from_str(&openapi).unwrap())
 }

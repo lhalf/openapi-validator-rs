@@ -7,13 +7,13 @@ use crate::item_or_fetch::ItemOrFetch;
 use crate::to_jsonschema::ToJSONSchema;
 use crate::validators::jsonschema::JSONSchemaValidator;
 
-pub struct ParametersValidator<'api> {
+pub struct ParametersValidator<'api, 'request> {
     pub operation_spec: &'api openapiv3::Operation,
     pub components: &'api Option<openapiv3::Components>,
-    pub path_parameters: HashMap<String, String>,
+    pub path_parameters: HashMap<&'api str, &'request str>,
 }
 
-impl<'api> ParametersValidator<'api> {
+impl<'api, 'request> ParametersValidator<'api, 'request> {
     pub fn validate_parameters(self, request: &Request) -> Result<ContentTypeValidator<'api>, ()> {
         let all_parameters_valid = self.operation_spec.parameters.iter().all(|parameter| {
             parameter
@@ -35,20 +35,20 @@ impl<'api> ParametersValidator<'api> {
 }
 
 trait ParameterValidator {
-    fn validate<'api>(
+    fn validate(
         &self,
         request: &Request,
-        components: &'api Option<openapiv3::Components>,
-        path_parameters: &HashMap<String, String>,
+        components: &Option<openapiv3::Components>,
+        path_parameters: &HashMap<&str, &str>,
     ) -> Result<(), ()>;
 }
 
 impl ParameterValidator for openapiv3::Parameter {
-    fn validate<'api>(
+    fn validate(
         &self,
         request: &Request,
-        components: &'api Option<openapiv3::Components>,
-        path_parameters: &HashMap<String, String>,
+        components: &Option<openapiv3::Components>,
+        path_parameters: &HashMap<&str, &str>,
     ) -> Result<(), ()> {
         let parameter_data = self.clone().parameter_data();
 
@@ -58,7 +58,9 @@ impl ParameterValidator for openapiv3::Parameter {
         let parameter_value = match self {
             openapiv3::Parameter::Header { .. } => request.get_header(&parameter_data.name),
             openapiv3::Parameter::Query { .. } => url.extract_query_parameter(&parameter_data.name),
-            openapiv3::Parameter::Path { .. } => path_parameters.get(&parameter_data.name).cloned(),
+            openapiv3::Parameter::Path { .. } => path_parameters
+                .get(parameter_data.name.as_str())
+                .map(|value| value.to_string()),
             _ => todo!(),
         };
 

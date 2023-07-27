@@ -1,14 +1,17 @@
 use super::parameters::ParametersValidator;
 use std::collections::HashMap;
 
-pub struct OperationValidator<'api> {
+pub struct OperationValidator<'api, 'request> {
     pub path_spec: &'api openapiv3::PathItem,
     pub components: &'api Option<openapiv3::Components>,
-    pub path_parameters: HashMap<String, String>,
+    pub path_parameters: HashMap<&'api str, &'request str>,
 }
 
-impl<'api> OperationValidator<'api> {
-    pub fn validate_operation(self, operation: &str) -> Result<ParametersValidator<'api>, ()> {
+impl<'api, 'request> OperationValidator<'api, 'request> {
+    pub fn validate_operation(
+        self,
+        operation: &str,
+    ) -> Result<ParametersValidator<'api, 'request>, ()> {
         let operation_spec = match operation {
             "get" => self.path_spec.get.as_ref().ok_or(()),
             "put" => self.path_spec.put.as_ref().ok_or(()),
