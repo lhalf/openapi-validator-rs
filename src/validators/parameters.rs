@@ -17,8 +17,7 @@ impl<'api, 'request> ParametersValidator<'api, 'request> {
     pub fn validate_parameters(self, request: &Request) -> Result<ContentTypeValidator<'api>, ()> {
         let all_parameters_valid = self.operation_spec.parameters.iter().all(|parameter| {
             parameter
-                .as_item()
-                .unwrap()
+                .item_or_fetch(self.components)
                 .validate(request, self.components, &self.path_parameters)
                 .is_ok()
         });
@@ -390,6 +389,40 @@ mod test_header_parameters {
             .validate_request(request)
             .is_ok());
     }
+
+    #[test]
+    fn accept_a_request_given_a_parameter_reference() {
+        let path_spec = indoc!(
+            r#"
+            paths:
+              /requires/header/parameter:
+                post:
+                  parameters:
+                    - $ref: '#/components/parameters/thingParam'
+                  responses:
+                    200:
+                      description: API call successful
+
+            components:
+              parameters:
+                thingParam:
+                  name: thing
+                  in: header
+                  required: true
+                  schema:
+                    type: boolean
+            "#
+        );
+        let request = Request {
+            url: "http://test.com/requires/header/parameter".to_string(),
+            operation: "post".to_string(),
+            body: vec![],
+            headers: HashMap::from([("thing".to_string(), "true".to_string())]),
+        };
+        assert!(make_validator_from_spec(path_spec)
+            .validate_request(request)
+            .is_ok());
+    }
 }
 
 #[cfg(test)]
@@ -680,6 +713,40 @@ mod test_query_parameters {
             .validate_request(request)
             .is_ok());
     }
+
+    #[test]
+    fn accept_a_request_given_a_parameter_reference() {
+        let path_spec = indoc!(
+            r#"
+            paths:
+              /requires/query/parameter:
+                post:
+                  parameters:
+                    - $ref: '#/components/parameters/thingParam'
+                  responses:
+                    200:
+                      description: API call successful
+
+            components:
+              parameters:
+                thingParam:
+                  name: thing
+                  in: query
+                  required: true
+                  schema:
+                    type: boolean
+            "#
+        );
+        let request = Request {
+            url: "http://test.com/requires/query/parameter?thing=true".to_string(),
+            operation: "post".to_string(),
+            body: vec![],
+            headers: HashMap::new(),
+        };
+        assert!(make_validator_from_spec(path_spec)
+            .validate_request(request)
+            .is_ok());
+    }
 }
 
 #[cfg(test)]
@@ -903,6 +970,40 @@ mod test_path_parameters {
               schemas:
                 Test:
                   type: boolean
+            "#
+        );
+        let request = Request {
+            url: "http://test.com/requires/path/parameter/true".to_string(),
+            operation: "post".to_string(),
+            body: vec![],
+            headers: HashMap::new(),
+        };
+        assert!(make_validator_from_spec(path_spec)
+            .validate_request(request)
+            .is_ok());
+    }
+
+    #[test]
+    fn accept_a_request_given_a_parameter_reference() {
+        let path_spec = indoc!(
+            r#"
+            paths:
+              /requires/path/parameter/{here}:
+                post:
+                  parameters:
+                    - $ref: '#/components/parameters/thingParam'
+                  responses:
+                    200:
+                      description: API call successful
+
+            components:
+              parameters:
+                thingParam:
+                  name: here
+                  in: path
+                  required: true
+                  schema:
+                    type: boolean
             "#
         );
         let request = Request {
