@@ -881,4 +881,38 @@ mod test_path_parameters {
             .validate_request(request)
             .is_ok());
     }
+
+    #[test]
+    fn accept_a_request_with_valid_path_parameter_from_component_schema() {
+        let path_spec = indoc!(
+            r#"
+            paths:
+              /requires/path/parameter/{here}:
+                post:
+                  parameters:
+                    - in: path
+                      name: here
+                      required: true
+                      schema:
+                        $ref: '#/components/schemas/Test'
+                  responses:
+                    200:
+                      description: API call successful
+
+            components:
+              schemas:
+                Test:
+                  type: boolean
+            "#
+        );
+        let request = Request {
+            url: "http://test.com/requires/path/parameter/true".to_string(),
+            operation: "post".to_string(),
+            body: vec![],
+            headers: HashMap::new(),
+        };
+        assert!(make_validator_from_spec(path_spec)
+            .validate_request(request)
+            .is_ok());
+    }
 }
