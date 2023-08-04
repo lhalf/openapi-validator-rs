@@ -148,15 +148,13 @@ impl ToJSONSchema for openapiv3::ObjectType {
 
 impl<T: ToJSONSchema + Clone> ToJSONSchema for openapiv3::ReferenceOr<T> {
     fn to_json_schema(&self) -> serde_json::Value {
-        self.clone().into_item().unwrap().to_json_schema()
+        self.clone().as_item().unwrap().to_json_schema()
     }
 }
 
 impl<T: ToJSONSchema> ToJSONSchema for Vec<T> {
     fn to_json_schema(&self) -> serde_json::Value {
-        self.iter()
-            .map(|schema| schema.clone().to_json_schema())
-            .collect()
+        self.iter().map(|schema| schema.to_json_schema()).collect()
     }
 }
 
