@@ -426,4 +426,39 @@ mod test_body {
         };
         let _ = make_validator_from_spec(path_spec).validate_request(request);
     }
+
+    #[test]
+    fn accept_a_valid_json_body_given_a_request_body_reference() {
+        let path_spec = indoc!(
+            r#"
+            paths:
+              /body/against/schema:
+                post:
+                  summary: Requires a body through a reference
+                  requestBody:
+                    $ref: '#/components/requestBodies/Test'
+                  responses:
+                    200:
+                      description: API call successful
+            
+            components:
+              requestBodies:
+                Test:
+                  required: true
+                  content:
+                    application/json:
+                      schema:
+                        type: boolean
+            "#
+        );
+        let request = Request {
+            url: "http://test.com/body/against/schema".to_string(),
+            operation: "post".to_string(),
+            body: r#"true"#.as_bytes().to_vec(),
+            headers: HashMap::from([("Content-Type".to_string(), "application/json".to_string())]),
+        };
+        assert!(make_validator_from_spec(path_spec)
+            .validate_request(request)
+            .is_ok());
+    }
 }

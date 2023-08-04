@@ -37,3 +37,20 @@ impl ItemOrFetch<openapiv3::Parameter> for openapiv3::ReferenceOr<openapiv3::Par
         }
     }
 }
+
+impl ItemOrFetch<openapiv3::RequestBody> for openapiv3::ReferenceOr<openapiv3::RequestBody> {
+    fn item_or_fetch<'api>(
+        &'api self,
+        components: &'api Option<openapiv3::Components>,
+    ) -> &openapiv3::RequestBody {
+        match self {
+            Self::Item(item) => item,
+            Self::Reference { reference } => components
+                .as_ref()
+                .unwrap()
+                .request_bodies
+                .index(reference.trim_start_matches("#/components/requestBodies/"))
+                .item_or_fetch(components),
+        }
+    }
+}

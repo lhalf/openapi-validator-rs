@@ -1,4 +1,5 @@
 use super::body::BodyValidator;
+use crate::item_or_fetch::ItemOrFetch;
 
 pub struct ContentTypeValidator<'api> {
     pub operation_spec: &'api openapiv3::Operation,
@@ -7,13 +8,8 @@ pub struct ContentTypeValidator<'api> {
 
 impl<'api> ContentTypeValidator<'api> {
     pub fn validate_content_type(&self, content_type: Option<String>) -> Result<BodyValidator, ()> {
-        let body_spec = match self
-            .operation_spec
-            .request_body
-            .as_ref()
-            .and_then(openapiv3::ReferenceOr::as_item)
-        {
-            Some(body_spec) => body_spec,
+        let body_spec = match self.operation_spec.request_body.as_ref() {
+            Some(body_spec) => body_spec.item_or_fetch(self.components),
             None => return Ok(BodyValidator::NoSpecification),
         };
 
