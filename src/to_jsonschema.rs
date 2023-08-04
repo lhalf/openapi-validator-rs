@@ -136,9 +136,7 @@ impl ToJSONSchema for openapiv3::ObjectType {
                 "additionalProperties".to_string(),
                 match additional_properties {
                     openapiv3::AdditionalProperties::Any(value) => value.clone().into(),
-                    openapiv3::AdditionalProperties::Schema(schema) => {
-                        schema.clone().to_json_schema()
-                    }
+                    openapiv3::AdditionalProperties::Schema(schema) => schema.to_json_schema(),
                 },
             );
         }
