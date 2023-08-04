@@ -39,10 +39,7 @@ impl ToJSONSchema for openapiv3::Schema {
             }
             openapiv3::SchemaKind::Not { not } => {
                 let mut json = serde_json::Map::new();
-                json.insert(
-                    "not".to_string(),
-                    not.clone().into_item().unwrap().to_json_schema(),
-                );
+                json.insert("not".to_string(), not.to_json_schema());
                 json.into()
             }
             _ => todo!(),
