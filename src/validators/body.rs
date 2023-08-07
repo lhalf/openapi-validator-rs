@@ -24,7 +24,7 @@ impl<'api> BodyValidator<'api> {
                 if let Some(body_schema) = body_spec.content["application/json"]
                     .schema
                     .as_ref()
-                    .map(|reference_or| reference_or.item_or_fetch(components))
+                    .map(|body_schema| body_schema.item_or_fetch(components))
                 {
                     return validate_json_body(body_schema, body);
                 }
