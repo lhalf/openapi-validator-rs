@@ -21,10 +21,16 @@ impl<'api> BodyValidator<'api> {
                 body_spec,
                 components,
             } => {
-                if let Some(body_schema) = body_spec.content["application/json"]
-                    .schema
-                    .as_ref()
-                    .map(|body_schema| body_schema.item_or_fetch(components))
+                if let Some(body_schema) =
+                    body_spec
+                        .content
+                        .get("application/json")
+                        .and_then(|content| {
+                            content
+                                .schema
+                                .as_ref()
+                                .map(|schema| schema.item_or_fetch(components))
+                        })
                 {
                     return validate_json_body(body_schema, body);
                 }
@@ -35,14 +41,17 @@ impl<'api> BodyValidator<'api> {
 
                 Err(())
             }
-            Self::PlainUTF8Body { .. } => match std::str::from_utf8(body) {
+            Self::PlainUTF8Body => match std::str::from_utf8(body) {
                 Ok(_) => Ok(()),
                 Err(_) => Err(()),
             },
-            Self::EmptyContentType { body_spec } => match !body_spec.required && body.is_empty() {
-                true => Ok(()),
-                false => Err(()),
-            },
+            Self::EmptyContentType { body_spec } => {
+                if !body_spec.required && body.is_empty() {
+                    Ok(())
+                } else {
+                    Err(())
+                }
+            }
             Self::NoSpecification => Ok(()),
         }
     }
