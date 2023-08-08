@@ -8,27 +8,24 @@ pub struct ContentTypeValidator<'api> {
 
 impl<'api> ContentTypeValidator<'api> {
     pub fn validate_content_type(&self, content_type: Option<String>) -> Result<BodyValidator, ()> {
-        let body_spec = match self.operation_spec.request_body.as_ref() {
+        let body_spec = match &self.operation_spec.request_body {
             Some(body_spec) => body_spec.item_or_fetch(self.components),
             None => return Ok(BodyValidator::NoSpecification),
         };
 
-        let content_type = match content_type {
-            Some(content_type) => content_type,
-            _ => return Ok(BodyValidator::EmptyContentType { body_spec }),
-        };
-
-        if !body_spec.content.contains_key(&content_type) {
-            return Err(());
-        }
-
-        match content_type.as_str() {
-            "application/json" => Ok(BodyValidator::JSONBody {
-                body_spec,
-                components: self.components,
-            }),
-            "text/plain; charset=utf-8" => Ok(BodyValidator::PlainUTF8Body),
-            _ => Err(()),
+        match content_type {
+            Some(content_type) if body_spec.content.contains_key(&content_type) => {
+                match content_type.as_str() {
+                    "application/json" => Ok(BodyValidator::JSONBody {
+                        body_spec,
+                        components: self.components,
+                    }),
+                    "text/plain; charset=utf-8" => Ok(BodyValidator::PlainUTF8Body),
+                    _ => Err(()),
+                }
+            }
+            Some(_) => Err(()),
+            None => Ok(BodyValidator::EmptyContentType { body_spec }),
         }
     }
 }
