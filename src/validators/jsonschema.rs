@@ -6,15 +6,9 @@ pub trait JSONSchemaValidator {
 
 impl JSONSchemaValidator for serde_json::Value {
     fn validates(&self, input: &str) -> Result<(), ()> {
-        let json_parameter = match serde_json::from_slice::<serde_json::Value>(input.as_bytes()) {
-            Ok(json_parameter) => json_parameter,
-            Err(_) => return Err(()),
-        };
+        let json_parameter: serde_json::Value = serde_json::from_str(input).map_err(|_| ())?;
 
-        let schema = match JSONSchema::compile(&self) {
-            Ok(schema) => schema,
-            Err(_) => return Err(()),
-        };
+        let schema = JSONSchema::compile(&self).map_err(|_| ())?;
 
         if !schema.is_valid(&json_parameter) {
             return Err(());
