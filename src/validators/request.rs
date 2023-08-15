@@ -4,6 +4,7 @@ use url::Url;
 
 use super::operation::OperationValidator;
 
+#[derive(Debug, PartialEq, Clone)]
 pub struct Validator {
     api: openapiv3::OpenAPI,
 }
