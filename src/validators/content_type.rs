@@ -13,12 +13,7 @@ impl<'api> ContentTypeValidator<'api> {
     ) -> Result<BodyValidator<'api>, ()> {
         let body_spec = match &self.operation_spec.request_body {
             Some(body_spec) => body_spec.item_or_fetch(self.components),
-            None => {
-                return Ok(BodyValidator::NoSpecification {
-                    response_spec: &self.operation_spec.responses,
-                    components: self.components,
-                })
-            }
+            None => return Ok(BodyValidator::NoSpecification),
         };
 
         match content_type {
@@ -27,21 +22,13 @@ impl<'api> ContentTypeValidator<'api> {
                     "application/json" => Ok(BodyValidator::JSONBody {
                         body_spec,
                         components: self.components,
-                        response_spec: &self.operation_spec.responses,
                     }),
-                    "text/plain; charset=utf-8" => Ok(BodyValidator::PlainUTF8Body {
-                        response_spec: &self.operation_spec.responses,
-                        components: self.components,
-                    }),
+                    "text/plain; charset=utf-8" => Ok(BodyValidator::PlainUTF8Body),
                     _ => Err(()),
                 }
             }
             Some(_) => Err(()),
-            None => Ok(BodyValidator::EmptyContentType {
-                body_spec,
-                response_spec: &self.operation_spec.responses,
-                components: self.components,
-            }),
+            None => Ok(BodyValidator::EmptyContentType { body_spec }),
         }
     }
 }

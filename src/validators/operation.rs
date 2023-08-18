@@ -1,4 +1,7 @@
 use super::parameters::ParametersValidator;
+use crate::validators::content_type::ContentTypeValidator;
+use crate::validators::request::Request;
+use crate::validators::response::ResponseValidator;
 use std::collections::HashMap;
 
 pub struct OperationValidator<'api, 'request> {
@@ -8,21 +11,32 @@ pub struct OperationValidator<'api, 'request> {
 }
 
 impl<'api, 'request> OperationValidator<'api, 'request> {
-    pub fn validate_operation(
-        self,
-        operation: &str,
-    ) -> Result<ParametersValidator<'api, 'request>, ()> {
-        let operation_spec = match operation {
+    pub fn validate_operation(self, request: &dyn Request) -> Result<ResponseValidator<'api>, ()> {
+        let operation_spec = match request.operation() {
             "get" => self.path_spec.get.as_ref().ok_or(()),
             "put" => self.path_spec.put.as_ref().ok_or(()),
             "delete" => self.path_spec.delete.as_ref().ok_or(()),
             "post" => self.path_spec.post.as_ref().ok_or(()),
             _ => Err(()),
         }?;
-        Ok(ParametersValidator {
+
+        ParametersValidator {
             operation_spec,
             components: self.components,
             path_parameters: self.path_parameters,
+        }
+        .validate_parameters(request)?;
+
+        ContentTypeValidator {
+            operation_spec,
+            components: self.components,
+        }
+        .validate_content_type(request.get_header("Content-Type"))?
+        .validate_body(request.body())?;
+
+        Ok(ResponseValidator {
+            response_spec: &operation_spec.responses,
+            components: self.components,
         })
     }
 }

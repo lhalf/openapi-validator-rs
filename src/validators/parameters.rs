@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 use url::Url;
 
-use super::content_type::ContentTypeValidator;
 use super::request::Request;
 use crate::item_or_fetch::ItemOrFetch;
 use crate::to_jsonschema::ToJSONSchema;
@@ -14,10 +13,7 @@ pub struct ParametersValidator<'api, 'request> {
 }
 
 impl<'api, 'request> ParametersValidator<'api, 'request> {
-    pub fn validate_parameters(
-        self,
-        request: &dyn Request,
-    ) -> Result<ContentTypeValidator<'api>, ()> {
+    pub fn validate_parameters(self, request: &dyn Request) -> Result<(), ()> {
         let all_parameters_valid = self.operation_spec.parameters.iter().all(|parameter| {
             parameter
                 .item_or_fetch(self.components)
@@ -29,10 +25,7 @@ impl<'api, 'request> ParametersValidator<'api, 'request> {
             return Err(());
         }
 
-        Ok(ContentTypeValidator {
-            operation_spec: self.operation_spec,
-            components: self.components,
-        })
+        Ok(())
     }
 }
 

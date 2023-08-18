@@ -1,36 +1,25 @@
 use crate::item_or_fetch::ItemOrFetch;
 use crate::to_jsonschema::ToJSONSchema;
 use crate::validators::jsonschema::JSONSchemaValidator;
-use crate::validators::response::ResponseValidator;
 
 pub enum BodyValidator<'api> {
-    NoSpecification {
-        response_spec: &'api openapiv3::Responses,
-        components: &'api Option<openapiv3::Components>,
-    },
+    NoSpecification,
     EmptyContentType {
         body_spec: &'api openapiv3::RequestBody,
-        components: &'api Option<openapiv3::Components>,
-        response_spec: &'api openapiv3::Responses,
     },
     JSONBody {
         body_spec: &'api openapiv3::RequestBody,
         components: &'api Option<openapiv3::Components>,
-        response_spec: &'api openapiv3::Responses,
     },
-    PlainUTF8Body {
-        response_spec: &'api openapiv3::Responses,
-        components: &'api Option<openapiv3::Components>,
-    },
+    PlainUTF8Body,
 }
 
 impl<'api> BodyValidator<'api> {
-    pub fn validate_body(self, body: &[u8]) -> Result<ResponseValidator<'api>, ()> {
+    pub fn validate_body(self, body: &[u8]) -> Result<(), ()> {
         match self {
             Self::JSONBody {
                 body_spec,
                 components,
-                response_spec,
             } => {
                 if let Some(body_schema) =
                     body_spec
@@ -43,55 +32,27 @@ impl<'api> BodyValidator<'api> {
                                 .map(|schema| schema.item_or_fetch(components))
                         })
                 {
-                    if validate_json_body(body_schema, body).is_ok() {
-                        return Ok(ResponseValidator {
-                            response_spec,
-                            components,
-                        });
-                    }
-                    return Err(());
+                    return validate_json_body(body_schema, body);
                 }
 
                 if serde_json::from_slice::<serde_json::Value>(body).is_ok() {
-                    return Ok(ResponseValidator {
-                        response_spec,
-                        components,
-                    });
+                    return Ok(());
                 }
 
                 Err(())
             }
-            Self::PlainUTF8Body {
-                response_spec,
-                components,
-            } => match std::str::from_utf8(body) {
-                Ok(_) => Ok(ResponseValidator {
-                    response_spec,
-                    components,
-                }),
+            Self::PlainUTF8Body => match std::str::from_utf8(body) {
+                Ok(_) => Ok(()),
                 Err(_) => Err(()),
             },
-            Self::EmptyContentType {
-                body_spec,
-                response_spec,
-                components,
-            } => {
+            Self::EmptyContentType { body_spec } => {
                 if !body_spec.required && body.is_empty() {
-                    Ok(ResponseValidator {
-                        response_spec,
-                        components,
-                    })
+                    Ok(())
                 } else {
                     Err(())
                 }
             }
-            Self::NoSpecification {
-                response_spec,
-                components,
-            } => Ok(ResponseValidator {
-                response_spec,
-                components,
-            }),
+            Self::NoSpecification => Ok(()),
         }
     }
 }
