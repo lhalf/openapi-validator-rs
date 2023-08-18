@@ -1,25 +1,36 @@
 use crate::item_or_fetch::ItemOrFetch;
 use crate::to_jsonschema::ToJSONSchema;
 use crate::validators::jsonschema::JSONSchemaValidator;
+use crate::validators::response::ResponseValidator;
 
 pub enum BodyValidator<'api> {
-    NoSpecification,
+    NoSpecification {
+        response_spec: &'api openapiv3::Responses,
+        components: &'api Option<openapiv3::Components>,
+    },
     EmptyContentType {
         body_spec: &'api openapiv3::RequestBody,
+        components: &'api Option<openapiv3::Components>,
+        response_spec: &'api openapiv3::Responses,
     },
     JSONBody {
         body_spec: &'api openapiv3::RequestBody,
         components: &'api Option<openapiv3::Components>,
+        response_spec: &'api openapiv3::Responses,
     },
-    PlainUTF8Body,
+    PlainUTF8Body {
+        response_spec: &'api openapiv3::Responses,
+        components: &'api Option<openapiv3::Components>,
+    },
 }
 
 impl<'api> BodyValidator<'api> {
-    pub fn validate_body(&self, body: &[u8]) -> Result<(), ()> {
+    pub fn validate_body(self, body: &[u8]) -> Result<ResponseValidator<'api>, ()> {
         match self {
             Self::JSONBody {
                 body_spec,
                 components,
+                response_spec,
             } => {
                 if let Some(body_schema) =
                     body_spec
@@ -32,27 +43,55 @@ impl<'api> BodyValidator<'api> {
                                 .map(|schema| schema.item_or_fetch(components))
                         })
                 {
-                    return validate_json_body(body_schema, body);
+                    if validate_json_body(body_schema, body).is_ok() {
+                        return Ok(ResponseValidator {
+                            response_spec,
+                            components,
+                        });
+                    }
+                    return Err(());
                 }
 
                 if serde_json::from_slice::<serde_json::Value>(body).is_ok() {
-                    return Ok(());
+                    return Ok(ResponseValidator {
+                        response_spec,
+                        components,
+                    });
                 }
 
                 Err(())
             }
-            Self::PlainUTF8Body => match std::str::from_utf8(body) {
-                Ok(_) => Ok(()),
+            Self::PlainUTF8Body {
+                response_spec,
+                components,
+            } => match std::str::from_utf8(body) {
+                Ok(_) => Ok(ResponseValidator {
+                    response_spec,
+                    components,
+                }),
                 Err(_) => Err(()),
             },
-            Self::EmptyContentType { body_spec } => {
+            Self::EmptyContentType {
+                body_spec,
+                response_spec,
+                components,
+            } => {
                 if !body_spec.required && body.is_empty() {
-                    Ok(())
+                    Ok(ResponseValidator {
+                        response_spec,
+                        components,
+                    })
                 } else {
                     Err(())
                 }
             }
-            Self::NoSpecification => Ok(()),
+            Self::NoSpecification {
+                response_spec,
+                components,
+            } => Ok(ResponseValidator {
+                response_spec,
+                components,
+            }),
         }
     }
 }
@@ -96,7 +135,7 @@ mod test_body {
         };
         assert_eq!(
             Err(()),
-            make_validator_from_spec(path_spec).validate_request(request)
+            make_validator_from_spec(path_spec).validate_request(&request)
         );
     }
 
@@ -122,7 +161,7 @@ mod test_body {
             headers: HashMap::new(),
         };
         assert!(make_validator_from_spec(path_spec)
-            .validate_request(request)
+            .validate_request(&request)
             .is_ok());
     }
 
@@ -151,7 +190,7 @@ mod test_body {
             headers: HashMap::from([("Content-Type".to_string(), "application/json".to_string())]),
         };
         assert!(make_validator_from_spec(path_spec)
-            .validate_request(request)
+            .validate_request(&request)
             .is_ok());
     }
 
@@ -181,7 +220,7 @@ mod test_body {
         };
         assert_eq!(
             Err(()),
-            make_validator_from_spec(path_spec).validate_request(request)
+            make_validator_from_spec(path_spec).validate_request(&request)
         );
     }
 
@@ -213,7 +252,7 @@ mod test_body {
             )]),
         };
         assert!(make_validator_from_spec(path_spec)
-            .validate_request(request)
+            .validate_request(&request)
             .is_ok());
     }
 
@@ -246,7 +285,7 @@ mod test_body {
         };
         assert_eq!(
             Err(()),
-            make_validator_from_spec(path_spec).validate_request(request)
+            make_validator_from_spec(path_spec).validate_request(&request)
         );
     }
 
@@ -282,7 +321,7 @@ mod test_body {
         };
         assert_eq!(
             Err(()),
-            make_validator_from_spec(path_spec).validate_request(request)
+            make_validator_from_spec(path_spec).validate_request(&request)
         );
     }
 
@@ -326,7 +365,7 @@ mod test_body {
             headers: HashMap::from([("Content-Type".to_string(), "application/json".to_string())]),
         };
         assert!(make_validator_from_spec(path_spec)
-            .validate_request(request)
+            .validate_request(&request)
             .is_ok());
     }
 
@@ -361,7 +400,7 @@ mod test_body {
             headers: HashMap::from([("Content-Type".to_string(), "application/json".to_string())]),
         };
         assert!(make_validator_from_spec(path_spec)
-            .validate_request(request)
+            .validate_request(&request)
             .is_ok());
     }
 
@@ -398,7 +437,7 @@ mod test_body {
             headers: HashMap::from([("Content-Type".to_string(), "application/json".to_string())]),
         };
         assert!(make_validator_from_spec(path_spec)
-            .validate_request(request)
+            .validate_request(&request)
             .is_ok());
     }
 
@@ -433,7 +472,7 @@ mod test_body {
             body: r#"true"#.as_bytes().to_vec(),
             headers: HashMap::from([("Content-Type".to_string(), "application/json".to_string())]),
         };
-        let _ = make_validator_from_spec(path_spec).validate_request(request);
+        let _ = make_validator_from_spec(path_spec).validate_request(&request);
     }
 
     #[test]
@@ -467,7 +506,7 @@ mod test_body {
             headers: HashMap::from([("Content-Type".to_string(), "application/json".to_string())]),
         };
         assert!(make_validator_from_spec(path_spec)
-            .validate_request(request)
+            .validate_request(&request)
             .is_ok());
     }
 }

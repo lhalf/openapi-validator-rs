@@ -7,10 +7,18 @@ pub struct ContentTypeValidator<'api> {
 }
 
 impl<'api> ContentTypeValidator<'api> {
-    pub fn validate_content_type(&self, content_type: Option<String>) -> Result<BodyValidator, ()> {
+    pub fn validate_content_type(
+        self,
+        content_type: Option<String>,
+    ) -> Result<BodyValidator<'api>, ()> {
         let body_spec = match &self.operation_spec.request_body {
             Some(body_spec) => body_spec.item_or_fetch(self.components),
-            None => return Ok(BodyValidator::NoSpecification),
+            None => {
+                return Ok(BodyValidator::NoSpecification {
+                    response_spec: &self.operation_spec.responses,
+                    components: self.components,
+                })
+            }
         };
 
         match content_type {
@@ -19,13 +27,21 @@ impl<'api> ContentTypeValidator<'api> {
                     "application/json" => Ok(BodyValidator::JSONBody {
                         body_spec,
                         components: self.components,
+                        response_spec: &self.operation_spec.responses,
                     }),
-                    "text/plain; charset=utf-8" => Ok(BodyValidator::PlainUTF8Body),
+                    "text/plain; charset=utf-8" => Ok(BodyValidator::PlainUTF8Body {
+                        response_spec: &self.operation_spec.responses,
+                        components: self.components,
+                    }),
                     _ => Err(()),
                 }
             }
             Some(_) => Err(()),
-            None => Ok(BodyValidator::EmptyContentType { body_spec }),
+            None => Ok(BodyValidator::EmptyContentType {
+                body_spec,
+                response_spec: &self.operation_spec.responses,
+                components: self.components,
+            }),
         }
     }
 }
@@ -63,7 +79,7 @@ mod test_content_type {
         };
         assert_eq!(
             Err(()),
-            make_validator_from_spec(path_spec).validate_request(request)
+            make_validator_from_spec(path_spec).validate_request(&request)
         );
     }
 
@@ -93,7 +109,7 @@ mod test_content_type {
         };
         assert_eq!(
             Err(()),
-            make_validator_from_spec(path_spec).validate_request(request)
+            make_validator_from_spec(path_spec).validate_request(&request)
         );
     }
 
@@ -125,7 +141,7 @@ mod test_content_type {
         };
         assert_eq!(
             Err(()),
-            make_validator_from_spec(path_spec).validate_request(request)
+            make_validator_from_spec(path_spec).validate_request(&request)
         );
     }
 
@@ -159,7 +175,7 @@ mod test_content_type {
             )]),
         };
         assert!(make_validator_from_spec(path_spec)
-            .validate_request(request)
+            .validate_request(&request)
             .is_ok());
     }
 }

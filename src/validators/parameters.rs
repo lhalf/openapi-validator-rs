@@ -123,7 +123,7 @@ mod test_header_parameters {
         };
         assert_eq!(
             Err(()),
-            make_validator_from_spec(path_spec).validate_request(request)
+            make_validator_from_spec(path_spec).validate_request(&request)
         );
     }
 
@@ -158,7 +158,7 @@ mod test_header_parameters {
         };
         assert_eq!(
             Err(()),
-            make_validator_from_spec(path_spec).validate_request(request)
+            make_validator_from_spec(path_spec).validate_request(&request)
         );
     }
 
@@ -188,7 +188,7 @@ mod test_header_parameters {
         };
         assert_eq!(
             Err(()),
-            make_validator_from_spec(path_spec).validate_request(request)
+            make_validator_from_spec(path_spec).validate_request(&request)
         );
     }
 
@@ -226,7 +226,7 @@ mod test_header_parameters {
         };
         assert_eq!(
             Err(()),
-            make_validator_from_spec(path_spec).validate_request(request)
+            make_validator_from_spec(path_spec).validate_request(&request)
         );
     }
 
@@ -255,7 +255,7 @@ mod test_header_parameters {
             headers: HashMap::new(),
         };
         assert!(make_validator_from_spec(path_spec)
-            .validate_request(request)
+            .validate_request(&request)
             .is_ok());
     }
 
@@ -285,7 +285,7 @@ mod test_header_parameters {
         };
         assert_eq!(
             Err(()),
-            make_validator_from_spec(path_spec).validate_request(request)
+            make_validator_from_spec(path_spec).validate_request(&request)
         );
     }
 
@@ -322,7 +322,7 @@ mod test_header_parameters {
             ]),
         };
         assert!(make_validator_from_spec(path_spec)
-            .validate_request(request)
+            .validate_request(&request)
             .is_ok());
     }
 
@@ -352,7 +352,7 @@ mod test_header_parameters {
         };
         assert_eq!(
             Err(()),
-            make_validator_from_spec(path_spec).validate_request(request)
+            make_validator_from_spec(path_spec).validate_request(&request)
         );
     }
 
@@ -386,7 +386,7 @@ mod test_header_parameters {
             headers: HashMap::from([("thing".to_string(), "true".to_string())]),
         };
         assert!(make_validator_from_spec(path_spec)
-            .validate_request(request)
+            .validate_request(&request)
             .is_ok());
     }
 
@@ -420,7 +420,7 @@ mod test_header_parameters {
             headers: HashMap::from([("thing".to_string(), "true".to_string())]),
         };
         assert!(make_validator_from_spec(path_spec)
-            .validate_request(request)
+            .validate_request(&request)
             .is_ok());
     }
 }
@@ -458,7 +458,7 @@ mod test_query_parameters {
         };
         assert_eq!(
             Err(()),
-            make_validator_from_spec(path_spec).validate_request(request)
+            make_validator_from_spec(path_spec).validate_request(&request)
         );
     }
 
@@ -493,7 +493,7 @@ mod test_query_parameters {
         };
         assert_eq!(
             Err(()),
-            make_validator_from_spec(path_spec).validate_request(request)
+            make_validator_from_spec(path_spec).validate_request(&request)
         );
     }
 
@@ -523,7 +523,7 @@ mod test_query_parameters {
         };
         assert_eq!(
             Err(()),
-            make_validator_from_spec(path_spec).validate_request(request)
+            make_validator_from_spec(path_spec).validate_request(&request)
         );
     }
 
@@ -552,7 +552,7 @@ mod test_query_parameters {
             headers: HashMap::new(),
         };
         assert!(make_validator_from_spec(path_spec)
-            .validate_request(request)
+            .validate_request(&request)
             .is_ok());
     }
 
@@ -581,7 +581,7 @@ mod test_query_parameters {
             headers: HashMap::new(),
         };
         assert!(make_validator_from_spec(path_spec)
-            .validate_request(request)
+            .validate_request(&request)
             .is_ok());
     }
 
@@ -611,7 +611,7 @@ mod test_query_parameters {
         };
         assert_eq!(
             Err(()),
-            make_validator_from_spec(path_spec).validate_request(request)
+            make_validator_from_spec(path_spec).validate_request(&request)
         );
     }
 
@@ -646,7 +646,7 @@ mod test_query_parameters {
             headers: HashMap::new(),
         };
         assert!(make_validator_from_spec(path_spec)
-            .validate_request(request)
+            .validate_request(&request)
             .is_ok());
     }
 
@@ -676,7 +676,7 @@ mod test_query_parameters {
         };
         assert_eq!(
             Err(()),
-            make_validator_from_spec(path_spec).validate_request(request)
+            make_validator_from_spec(path_spec).validate_request(&request)
         );
     }
 
@@ -710,7 +710,7 @@ mod test_query_parameters {
             headers: HashMap::new(),
         };
         assert!(make_validator_from_spec(path_spec)
-            .validate_request(request)
+            .validate_request(&request)
             .is_ok());
     }
 
@@ -744,7 +744,7 @@ mod test_query_parameters {
             headers: HashMap::new(),
         };
         assert!(make_validator_from_spec(path_spec)
-            .validate_request(request)
+            .validate_request(&request)
             .is_ok());
     }
 }
@@ -782,7 +782,7 @@ mod test_path_parameters {
         };
         assert_eq!(
             Err(()),
-            make_validator_from_spec(path_spec).validate_request(request)
+            make_validator_from_spec(path_spec).validate_request(&request)
         );
     }
 
@@ -812,7 +812,7 @@ mod test_path_parameters {
         };
         assert_eq!(
             Err(()),
-            make_validator_from_spec(path_spec).validate_request(request)
+            make_validator_from_spec(path_spec).validate_request(&request)
         );
     }
 
@@ -847,7 +847,7 @@ mod test_path_parameters {
         };
         assert_eq!(
             Err(()),
-            make_validator_from_spec(path_spec).validate_request(request)
+            make_validator_from_spec(path_spec).validate_request(&request)
         );
     }
 
@@ -882,7 +882,7 @@ mod test_path_parameters {
         };
         assert_eq!(
             Err(()),
-            make_validator_from_spec(path_spec).validate_request(request)
+            make_validator_from_spec(path_spec).validate_request(&request)
         );
     }
 
@@ -911,7 +911,7 @@ mod test_path_parameters {
             headers: HashMap::new(),
         };
         assert!(make_validator_from_spec(path_spec)
-            .validate_request(request)
+            .validate_request(&request)
             .is_ok());
     }
 
@@ -945,7 +945,7 @@ mod test_path_parameters {
             headers: HashMap::new(),
         };
         assert!(make_validator_from_spec(path_spec)
-            .validate_request(request)
+            .validate_request(&request)
             .is_ok());
     }
 
@@ -979,7 +979,7 @@ mod test_path_parameters {
             headers: HashMap::new(),
         };
         assert!(make_validator_from_spec(path_spec)
-            .validate_request(request)
+            .validate_request(&request)
             .is_ok());
     }
 
@@ -1013,7 +1013,7 @@ mod test_path_parameters {
             headers: HashMap::new(),
         };
         assert!(make_validator_from_spec(path_spec)
-            .validate_request(request)
+            .validate_request(&request)
             .is_ok());
     }
 }

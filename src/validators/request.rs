@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use url::Url;
 
 use super::operation::OperationValidator;
+use crate::validators::response::ResponseValidator;
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Validator {
@@ -16,14 +17,14 @@ impl Validator {
     }
 
     //take &self rather than self otherwise Validator is consumed by validate_request (dropped)
-    pub fn validate_request(&self, request: Request) -> Result<Request, ()> {
+    pub fn validate_request(&self, request: &Request) -> Result<ResponseValidator, ()> {
         let url = self.parse_url(request.url())?;
+
         self.validate_path(url.path())?
             .validate_operation(request.operation())?
             .validate_parameters(&request)?
             .validate_content_type(request.get_header("Content-Type"))?
-            .validate_body(request.body())?;
-        Ok(request)
+            .validate_body(request.body())
     }
 
     fn parse_url(&self, url: &str) -> Result<Url, ()> {
@@ -198,7 +199,7 @@ mod test_url {
         };
         assert_eq!(
             Err(()),
-            make_validator_from_spec(path_spec).validate_request(request)
+            make_validator_from_spec(path_spec).validate_request(&request)
         );
     }
 
@@ -222,7 +223,7 @@ mod test_url {
         };
         assert_eq!(
             Err(()),
-            make_validator_from_spec(path_spec).validate_request(request)
+            make_validator_from_spec(path_spec).validate_request(&request)
         );
     }
 }
@@ -243,7 +244,7 @@ mod test_paths {
             body: vec![],
             headers: HashMap::new(),
         };
-        assert!(validator.validate_request(request).is_ok());
+        assert!(validator.validate_request(&request).is_ok());
     }
 
     #[test]
@@ -267,7 +268,7 @@ mod test_paths {
         };
         assert_eq!(
             Err(()),
-            make_validator_from_spec(path_spec).validate_request(request)
+            make_validator_from_spec(path_spec).validate_request(&request)
         );
     }
 }

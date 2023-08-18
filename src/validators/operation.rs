@@ -53,7 +53,7 @@ mod test_operations {
             headers: HashMap::new(),
         };
         assert!(make_validator_from_spec(path_spec)
-            .validate_request(request)
+            .validate_request(&request)
             .is_ok());
     }
 
@@ -76,7 +76,7 @@ mod test_operations {
             headers: HashMap::new(),
         };
         assert!(make_validator_from_spec(path_spec)
-            .validate_request(request)
+            .validate_request(&request)
             .is_ok());
     }
 
@@ -99,7 +99,7 @@ mod test_operations {
             headers: HashMap::new(),
         };
         assert!(make_validator_from_spec(path_spec)
-            .validate_request(request)
+            .validate_request(&request)
             .is_ok());
     }
 }
