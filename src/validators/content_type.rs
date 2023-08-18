@@ -48,8 +48,7 @@ impl<'api> ContentTypeValidator<'api> {
 
 #[cfg(test)]
 mod test_content_type {
-    use crate::validators::request::make_validator_from_spec;
-    use crate::validators::request::Request;
+    use crate::validators::request::test_helpers::*;
     use indoc::indoc;
     use std::collections::HashMap;
 
@@ -68,7 +67,7 @@ mod test_content_type {
                       description: API call successful
             "#
         );
-        let request = Request {
+        let request = FakeRequest {
             url: "http://test.com/required/body".to_string(),
             operation: "post".to_string(),
             body: "babe".as_bytes().to_vec(),
@@ -98,7 +97,7 @@ mod test_content_type {
                       description: API call successful
             "#
         );
-        let request = Request {
+        let request = FakeRequest {
             url: "http://test.com/not/required/body".to_string(),
             operation: "post".to_string(),
             body: "babe".as_bytes().to_vec(),
@@ -133,7 +132,7 @@ mod test_content_type {
                       description: API call successful
             "#
         );
-        let request = Request {
+        let request = FakeRequest {
             url: "http://test.com/allows/utf8/or/json/body".to_string(),
             operation: "post".to_string(),
             body: "ab".as_bytes().to_vec(),
@@ -165,7 +164,7 @@ mod test_content_type {
                       description: API call successful
             "#
         );
-        let request = Request {
+        let request = FakeRequest {
             url: "http://test.com/allows/utf8/or/json/body".to_string(),
             operation: "post".to_string(),
             body: "ab".as_bytes().to_vec(),

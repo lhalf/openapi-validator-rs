@@ -29,8 +29,7 @@ impl<'api, 'request> OperationValidator<'api, 'request> {
 
 #[cfg(test)]
 mod test_operations {
-    use crate::validators::request::make_validator_from_spec;
-    use crate::validators::request::Request;
+    use crate::validators::request::test_helpers::*;
     use indoc::indoc;
     use std::collections::HashMap;
 
@@ -46,7 +45,7 @@ mod test_operations {
                       description: API call successful
             "#
         );
-        let request = Request {
+        let request = FakeRequest {
             url: "http://test.com/allowed/put".to_string(),
             operation: "put".to_string(),
             body: vec![],
@@ -69,7 +68,7 @@ mod test_operations {
                       description: API call successful
             "#
         );
-        let request = Request {
+        let request = FakeRequest {
             url: "http://test.com/allowed/post".to_string(),
             operation: "post".to_string(),
             body: vec![],
@@ -92,7 +91,7 @@ mod test_operations {
                       description: API call successful
             "#
         );
-        let request = Request {
+        let request = FakeRequest {
             url: "http://test.com/allowed/delete".to_string(),
             operation: "delete".to_string(),
             body: vec![],

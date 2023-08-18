@@ -14,8 +14,7 @@ pub trait Response {}
 
 #[cfg(test)]
 mod test_responses {
-    use crate::validators::request::make_validator_from_spec;
-    use crate::validators::request::Request;
+    use crate::validators::request::test_helpers::*;
     use crate::validators::response::Response;
     use indoc::indoc;
     use std::collections::HashMap;
@@ -36,7 +35,7 @@ mod test_responses {
                       description: API call successful
             "#
         );
-        let request = Request {
+        let request = FakeRequest {
             url: "http:/test.com/my/path".to_string(),
             operation: "post".to_string(),
             body: vec![],

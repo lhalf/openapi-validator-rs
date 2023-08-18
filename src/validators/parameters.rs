@@ -14,7 +14,10 @@ pub struct ParametersValidator<'api, 'request> {
 }
 
 impl<'api, 'request> ParametersValidator<'api, 'request> {
-    pub fn validate_parameters(self, request: &Request) -> Result<ContentTypeValidator<'api>, ()> {
+    pub fn validate_parameters(
+        self,
+        request: &dyn Request,
+    ) -> Result<ContentTypeValidator<'api>, ()> {
         let all_parameters_valid = self.operation_spec.parameters.iter().all(|parameter| {
             parameter
                 .item_or_fetch(self.components)
@@ -36,7 +39,7 @@ impl<'api, 'request> ParametersValidator<'api, 'request> {
 trait ParameterValidator {
     fn validate(
         &self,
-        request: &Request,
+        request: &dyn Request,
         components: &Option<openapiv3::Components>,
         path_parameters: &HashMap<&str, &str>,
     ) -> Result<(), ()>;
@@ -45,7 +48,7 @@ trait ParameterValidator {
 impl ParameterValidator for openapiv3::Parameter {
     fn validate(
         &self,
-        request: &Request,
+        request: &dyn Request,
         components: &Option<openapiv3::Components>,
         path_parameters: &HashMap<&str, &str>,
     ) -> Result<(), ()> {
@@ -92,8 +95,7 @@ impl ExtractQueryParameter for Url {
 
 #[cfg(test)]
 mod test_header_parameters {
-    use crate::validators::request::make_validator_from_spec;
-    use crate::validators::request::Request;
+    use crate::validators::request::test_helpers::*;
     use indoc::indoc;
     use std::collections::HashMap;
 
@@ -115,7 +117,7 @@ mod test_header_parameters {
                       description: API call successful
             "#
         );
-        let request = Request {
+        let request = FakeRequest {
             url: "http://test.com/requires/header/parameter".to_string(),
             operation: "post".to_string(),
             body: vec![],
@@ -150,7 +152,7 @@ mod test_header_parameters {
                       description: API call successful
             "#
         );
-        let request = Request {
+        let request = FakeRequest {
             url: "http://test.com/requires/header/parameter".to_string(),
             operation: "post".to_string(),
             body: vec![],
@@ -180,7 +182,7 @@ mod test_header_parameters {
                       description: API call successful
             "#
         );
-        let request = Request {
+        let request = FakeRequest {
             url: "http://test.com/requires/header/parameter".to_string(),
             operation: "post".to_string(),
             body: vec![],
@@ -215,7 +217,7 @@ mod test_header_parameters {
                       description: API call successful
             "#
         );
-        let request = Request {
+        let request = FakeRequest {
             url: "http://test.com/requires/header/parameter".to_string(),
             operation: "post".to_string(),
             body: vec![],
@@ -248,7 +250,7 @@ mod test_header_parameters {
                       description: API call successful
             "#
         );
-        let request = Request {
+        let request = FakeRequest {
             url: "http://test.com/optional/header/parameter".to_string(),
             operation: "post".to_string(),
             body: vec![],
@@ -277,7 +279,7 @@ mod test_header_parameters {
                       description: API call successful
             "#
         );
-        let request = Request {
+        let request = FakeRequest {
             url: "http://test.com/optional/header/parameter".to_string(),
             operation: "post".to_string(),
             body: vec![],
@@ -312,7 +314,7 @@ mod test_header_parameters {
                       description: API call successful
             "#
         );
-        let request = Request {
+        let request = FakeRequest {
             url: "http://test.com/requires/header/parameter".to_string(),
             operation: "post".to_string(),
             body: vec![],
@@ -344,7 +346,7 @@ mod test_header_parameters {
                       description: API call successful
             "#
         );
-        let request = Request {
+        let request = FakeRequest {
             url: "http://test.com/requires/header/parameter".to_string(),
             operation: "post".to_string(),
             body: vec![],
@@ -379,7 +381,7 @@ mod test_header_parameters {
                   type: boolean
             "#
         );
-        let request = Request {
+        let request = FakeRequest {
             url: "http://test.com/requires/header/parameter".to_string(),
             operation: "post".to_string(),
             body: vec![],
@@ -413,7 +415,7 @@ mod test_header_parameters {
                     type: boolean
             "#
         );
-        let request = Request {
+        let request = FakeRequest {
             url: "http://test.com/requires/header/parameter".to_string(),
             operation: "post".to_string(),
             body: vec![],
@@ -427,8 +429,7 @@ mod test_header_parameters {
 
 #[cfg(test)]
 mod test_query_parameters {
-    use crate::validators::request::make_validator_from_spec;
-    use crate::validators::request::Request;
+    use crate::validators::request::test_helpers::*;
     use indoc::indoc;
     use std::collections::HashMap;
 
@@ -450,7 +451,7 @@ mod test_query_parameters {
                       description: API call successful
             "#
         );
-        let request = Request {
+        let request = FakeRequest {
             url: "http://test.com/requires/query/parameter".to_string(),
             operation: "post".to_string(),
             body: vec![],
@@ -485,7 +486,7 @@ mod test_query_parameters {
                       description: API call successful
             "#
         );
-        let request = Request {
+        let request = FakeRequest {
             url: "http://test.com/requires/two/query/parameter?thing=true".to_string(),
             operation: "post".to_string(),
             body: vec![],
@@ -515,7 +516,7 @@ mod test_query_parameters {
                       description: API call successful
             "#
         );
-        let request = Request {
+        let request = FakeRequest {
             url: "http://test.com/requires/query/parameter?thing=string".to_string(),
             operation: "post".to_string(),
             body: vec![],
@@ -545,7 +546,7 @@ mod test_query_parameters {
                       description: API call successful
             "#
         );
-        let request = Request {
+        let request = FakeRequest {
             url: "http://test.com/requires/query/parameter?thing=true".to_string(),
             operation: "post".to_string(),
             body: vec![],
@@ -574,7 +575,7 @@ mod test_query_parameters {
                       description: API call successful
             "#
         );
-        let request = Request {
+        let request = FakeRequest {
             url: "http://test.com/optional/query/parameter".to_string(),
             operation: "post".to_string(),
             body: vec![],
@@ -603,7 +604,7 @@ mod test_query_parameters {
                       description: API call successful
             "#
         );
-        let request = Request {
+        let request = FakeRequest {
             url: "http://test.com/optional/query/parameter?thing=123".to_string(),
             operation: "post".to_string(),
             body: vec![],
@@ -638,7 +639,7 @@ mod test_query_parameters {
                       description: API call successful
             "#
         );
-        let request = Request {
+        let request = FakeRequest {
             url: "http://test.com/requires/multiple/query/parameter?thing=true&another=\"cheese\""
                 .to_string(),
             operation: "post".to_string(),
@@ -668,7 +669,7 @@ mod test_query_parameters {
                       description: API call successful
             "#
         );
-        let request = Request {
+        let request = FakeRequest {
             url: "http://test.com/requires/multiple/query/parameter?another=not_valid".to_string(),
             operation: "post".to_string(),
             body: vec![],
@@ -703,7 +704,7 @@ mod test_query_parameters {
                   type: boolean
             "#
         );
-        let request = Request {
+        let request = FakeRequest {
             url: "http://test.com/requires/query/parameter?thing=true".to_string(),
             operation: "post".to_string(),
             body: vec![],
@@ -737,7 +738,7 @@ mod test_query_parameters {
                     type: boolean
             "#
         );
-        let request = Request {
+        let request = FakeRequest {
             url: "http://test.com/requires/query/parameter?thing=true".to_string(),
             operation: "post".to_string(),
             body: vec![],
@@ -751,8 +752,7 @@ mod test_query_parameters {
 
 #[cfg(test)]
 mod test_path_parameters {
-    use crate::validators::request::make_validator_from_spec;
-    use crate::validators::request::Request;
+    use crate::validators::request::test_helpers::*;
     use indoc::indoc;
     use std::collections::HashMap;
 
@@ -774,7 +774,7 @@ mod test_path_parameters {
                       description: API call successful
             "#
         );
-        let request = Request {
+        let request = FakeRequest {
             url: "http://test.com/requires/path/parameter".to_string(),
             operation: "post".to_string(),
             body: vec![],
@@ -804,7 +804,7 @@ mod test_path_parameters {
                       description: API call successful
             "#
         );
-        let request = Request {
+        let request = FakeRequest {
             url: "http://test.com/requires/path/parameter/123".to_string(),
             operation: "post".to_string(),
             body: vec![],
@@ -839,7 +839,7 @@ mod test_path_parameters {
                       description: API call successful
             "#
         );
-        let request = Request {
+        let request = FakeRequest {
             url: "http://test.com/requires/path/parameter/true".to_string(),
             operation: "post".to_string(),
             body: vec![],
@@ -874,7 +874,7 @@ mod test_path_parameters {
                       description: API call successful
             "#
         );
-        let request = Request {
+        let request = FakeRequest {
             url: "http://test.com/requires/true/parameter/123".to_string(),
             operation: "post".to_string(),
             body: vec![],
@@ -904,7 +904,7 @@ mod test_path_parameters {
                       description: API call successful
             "#
         );
-        let request = Request {
+        let request = FakeRequest {
             url: "http://test.com/requires/path/parameter/true".to_string(),
             operation: "post".to_string(),
             body: vec![],
@@ -938,7 +938,7 @@ mod test_path_parameters {
                       description: API call successful
             "#
         );
-        let request = Request {
+        let request = FakeRequest {
             url: "http://test.com/requires/true/number/12".to_string(),
             operation: "post".to_string(),
             body: vec![],
@@ -972,7 +972,7 @@ mod test_path_parameters {
                   type: boolean
             "#
         );
-        let request = Request {
+        let request = FakeRequest {
             url: "http://test.com/requires/path/parameter/true".to_string(),
             operation: "post".to_string(),
             body: vec![],
@@ -1006,7 +1006,7 @@ mod test_path_parameters {
                     type: boolean
             "#
         );
-        let request = Request {
+        let request = FakeRequest {
             url: "http://test.com/requires/path/parameter/true".to_string(),
             operation: "post".to_string(),
             body: vec![],

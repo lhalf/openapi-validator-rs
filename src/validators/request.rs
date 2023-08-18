@@ -17,12 +17,12 @@ impl Validator {
     }
 
     //take &self rather than self otherwise Validator is consumed by validate_request (dropped)
-    pub fn validate_request(&self, request: &Request) -> Result<ResponseValidator, ()> {
+    pub fn validate_request(&self, request: &dyn Request) -> Result<ResponseValidator, ()> {
         let url = self.parse_url(request.url())?;
 
         self.validate_path(url.path())?
             .validate_operation(request.operation())?
-            .validate_parameters(&request)?
+            .validate_parameters(request)?
             .validate_content_type(request.get_header("Content-Type"))?
             .validate_body(request.body())
     }
@@ -117,65 +117,76 @@ fn extract_path_parameters<'api, 'request>(
         .collect()
 }
 
-#[derive(Debug, PartialEq)]
-pub struct Request {
-    pub url: String,
-    pub operation: String,
-    pub body: Vec<u8>,
-    pub headers: HashMap<String, String>,
-}
+pub trait Request {
+    fn url(&self) -> &str;
 
-impl Request {
-    pub fn url(&self) -> &str {
-        &self.url
-    }
+    fn operation(&self) -> &str;
 
-    fn operation(&self) -> &str {
-        &self.operation
-    }
+    fn body(&self) -> &[u8];
 
-    fn body(&self) -> &[u8] {
-        &self.body
-    }
-
-    pub fn get_header(&self, key: &str) -> Option<String> {
-        self.headers.get(key).cloned()
-    }
+    fn get_header(&self, key: &str) -> Option<String>;
 }
 
 #[cfg(test)]
-pub fn make_validator_from_spec(path_spec: &str) -> Validator {
-    let openapi = indoc::indoc!(
-        r#"
+pub mod test_helpers {
+    use super::*;
+
+    pub struct FakeRequest {
+        pub url: String,
+        pub operation: String,
+        pub body: Vec<u8>,
+        pub headers: HashMap<String, String>,
+    }
+
+    impl Request for FakeRequest {
+        fn url(&self) -> &str {
+            &self.url
+        }
+
+        fn operation(&self) -> &str {
+            &self.operation
+        }
+
+        fn body(&self) -> &[u8] {
+            &self.body
+        }
+
+        fn get_header(&self, key: &str) -> Option<String> {
+            self.headers.get(key).cloned()
+        }
+    }
+
+    pub fn make_validator_from_spec(path_spec: &str) -> Validator {
+        let openapi = indoc::indoc!(
+            r#"
             openapi: 3.0.0
             info:
                 description: API to handle generic two-way HTTP requests
                 version: "1.0.0"
                 title: Swagger ReST Article
             "#
-    )
-    .to_string()
-        + path_spec;
-    Validator::new(serde_yaml::from_str(&openapi).unwrap())
-}
+        )
+        .to_string()
+            + path_spec;
+        Validator::new(serde_yaml::from_str(&openapi).unwrap())
+    }
 
-#[cfg(test)]
-pub fn make_validator() -> Result<Validator, ()> {
-    let spec = match std::fs::read_to_string("./specs/openapi.yaml") {
-        Ok(spec) => spec,
-        Err(..) => return Err(()),
-    };
-    let api = match serde_yaml::from_str(&spec) {
-        Ok(api) => api,
-        Err(..) => return Err(()),
-    };
-    Ok(Validator::new(api))
+    pub fn make_validator() -> Result<Validator, ()> {
+        let spec = match std::fs::read_to_string("./specs/openapi.yaml") {
+            Ok(spec) => spec,
+            Err(..) => return Err(()),
+        };
+        let api = match serde_yaml::from_str(&spec) {
+            Ok(api) => api,
+            Err(..) => return Err(()),
+        };
+        Ok(Validator::new(api))
+    }
 }
 
 #[cfg(test)]
 mod test_url {
-    use crate::validators::request::make_validator_from_spec;
-    use crate::validators::request::Request;
+    use super::test_helpers::*;
     use indoc::indoc;
     use std::collections::HashMap;
 
@@ -191,7 +202,7 @@ mod test_url {
                       description: API call successful
             "#
         );
-        let request = Request {
+        let request = FakeRequest {
             url: "http://do/not/care".to_string(),
             operation: "post".to_string(),
             body: vec![],
@@ -215,7 +226,7 @@ mod test_url {
                       description: API call successful
             "#
         );
-        let request = Request {
+        let request = FakeRequest {
             url: "test.com/do/not/care".to_string(),
             operation: "post".to_string(),
             body: vec![],
@@ -230,15 +241,14 @@ mod test_url {
 
 #[cfg(test)]
 mod test_paths {
-    use crate::validators::request::Request;
-    use crate::validators::request::{make_validator, make_validator_from_spec};
+    use crate::validators::request::test_helpers::*;
     use indoc::indoc;
     use std::collections::HashMap;
 
     #[test]
     fn accept_a_request_with_valid_path() {
         let validator = make_validator().unwrap();
-        let request = Request {
+        let request = FakeRequest {
             url: "http://test.com/ping".to_string(),
             operation: "get".to_string(),
             body: vec![],
@@ -260,7 +270,7 @@ mod test_paths {
                      description: API call successful
            "#
         );
-        let request = Request {
+        let request = FakeRequest {
             url: "http://test.com/invalid/path".to_string(),
             operation: "get".to_string(),
             body: vec![],

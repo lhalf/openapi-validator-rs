@@ -107,8 +107,7 @@ fn validate_json_body(schema: &openapiv3::Schema, body: &[u8]) -> Result<(), ()>
 
 #[cfg(test)]
 mod test_body {
-    use crate::validators::request::make_validator_from_spec;
-    use crate::validators::request::Request;
+    use crate::validators::request::test_helpers::*;
     use indoc::indoc;
     use std::collections::HashMap;
 
@@ -127,7 +126,7 @@ mod test_body {
                       description: API call successful
             "#
         );
-        let request = Request {
+        let request = FakeRequest {
             url: "http://test.com/required/body".to_string(),
             operation: "post".to_string(),
             body: vec![],
@@ -154,7 +153,7 @@ mod test_body {
                       description: API call successful
             "#
         );
-        let request = Request {
+        let request = FakeRequest {
             url: "http://test.com/not/required/body".to_string(),
             operation: "post".to_string(),
             body: vec![],
@@ -183,7 +182,7 @@ mod test_body {
                       description: API call successful
             "#
         );
-        let request = Request {
+        let request = FakeRequest {
             url: "http://test.com/required/json/body".to_string(),
             operation: "post".to_string(),
             body: "{}".as_bytes().to_vec(),
@@ -212,7 +211,7 @@ mod test_body {
                       description: API call successful
             "#
         );
-        let request = Request {
+        let request = FakeRequest {
             url: "http://test.com/required/json/body".to_string(),
             operation: "post".to_string(),
             body: "babe".as_bytes().to_vec(),
@@ -242,7 +241,7 @@ mod test_body {
                       description: API call successful
             "#
         );
-        let request = Request {
+        let request = FakeRequest {
             url: "http://test.com/required/utf8/body".to_string(),
             operation: "post".to_string(),
             body: "ab".as_bytes().to_vec(),
@@ -274,7 +273,7 @@ mod test_body {
                       description: API call successful
             "#
         );
-        let request = Request {
+        let request = FakeRequest {
             url: "http://test.com/required/utf8/body".to_string(),
             operation: "post".to_string(),
             body: vec![b'\xc3', b'\x28'],
@@ -313,7 +312,7 @@ mod test_body {
                       description: API call successful
             "#
         );
-        let request = Request {
+        let request = FakeRequest {
             url: "http://test.com/rejects/invalid/json/against/schema".to_string(),
             operation: "post".to_string(),
             body: r#"{"not key": "value"}"#.as_bytes().to_vec(),
@@ -356,7 +355,7 @@ mod test_body {
                       description: API call successful
             "#
         );
-        let request = Request {
+        let request = FakeRequest {
             url: "http://test.com/json/against/schema".to_string(),
             operation: "post".to_string(),
             body: r#"{"name": "laurence", "count": 10, "date": "2023-05-11"}"#
@@ -393,7 +392,7 @@ mod test_body {
                   type: boolean
             "#
         );
-        let request = Request {
+        let request = FakeRequest {
             url: "http://test.com/json/against/schema".to_string(),
             operation: "post".to_string(),
             body: r#"true"#.as_bytes().to_vec(),
@@ -430,7 +429,7 @@ mod test_body {
                   type: boolean
             "#
         );
-        let request = Request {
+        let request = FakeRequest {
             url: "http://test.com/json/against/schema".to_string(),
             operation: "post".to_string(),
             body: r#"true"#.as_bytes().to_vec(),
@@ -466,7 +465,7 @@ mod test_body {
                   type: boolean
             "#
         );
-        let request = Request {
+        let request = FakeRequest {
             url: "http://test.com/json/against/schema".to_string(),
             operation: "post".to_string(),
             body: r#"true"#.as_bytes().to_vec(),
@@ -499,7 +498,7 @@ mod test_body {
                         type: boolean
             "#
         );
-        let request = Request {
+        let request = FakeRequest {
             url: "http://test.com/body/against/schema".to_string(),
             operation: "post".to_string(),
             body: r#"true"#.as_bytes().to_vec(),
