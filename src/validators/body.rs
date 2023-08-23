@@ -1,6 +1,7 @@
 use crate::item_or_fetch::ItemOrFetch;
 use crate::to_jsonschema::ToJSONSchema;
 use crate::validators::jsonschema::JSONSchemaValidator;
+use openapiv3::{Components, RequestBody};
 
 pub enum BodyValidator<'api> {
     NoSpecification,
@@ -21,25 +22,7 @@ impl<'api> BodyValidator<'api> {
                 body_spec,
                 components,
             } => {
-                if let Some(body_schema) =
-                    body_spec
-                        .content
-                        .get("application/json")
-                        .and_then(|content| {
-                            content
-                                .schema
-                                .as_ref()
-                                .map(|schema| schema.item_or_fetch(components))
-                        })
-                {
-                    return validate_json_body(body_schema, body);
-                }
-
-                if serde_json::from_slice::<serde_json::Value>(body).is_ok() {
-                    return Ok(());
-                }
-
-                Err(())
+                return Self::validate_json(body_spec, body, components);
             }
             Self::PlainUTF8Body => match std::str::from_utf8(body) {
                 Ok(_) => Ok(()),
@@ -55,15 +38,36 @@ impl<'api> BodyValidator<'api> {
             Self::NoSpecification => Ok(()),
         }
     }
-}
 
-fn validate_json_body(schema: &openapiv3::Schema, body: &[u8]) -> Result<(), ()> {
-    let body = match std::str::from_utf8(body) {
-        Ok(body) => body,
-        Err(..) => return Err(()),
-    };
+    fn validate_json(
+        body_spec: &RequestBody,
+        body: &[u8],
+        components: &Option<Components>,
+    ) -> Result<(), ()> {
+        if let Some(body_schema) = body_spec
+            .content
+            .get("application/json")
+            .and_then(|content| {
+                content
+                    .schema
+                    .as_ref()
+                    .map(|schema| schema.item_or_fetch(components))
+            })
+        {
+            let body = match std::str::from_utf8(body) {
+                Ok(body) => body,
+                Err(..) => return Err(()),
+            };
 
-    schema.clone().to_json_schema().validates(body)
+            return body_schema.to_json_schema().validates(body);
+        }
+
+        if serde_json::from_slice::<serde_json::Value>(body).is_ok() {
+            return Ok(());
+        }
+
+        Err(())
+    }
 }
 
 #[cfg(test)]
