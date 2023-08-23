@@ -23,10 +23,7 @@ impl<'api> BodyValidator<'api> {
             } => {
                 return Self::validate_json(body_spec, body, components);
             }
-            Self::PlainUTF8Body => match std::str::from_utf8(body) {
-                Ok(_) => Ok(()),
-                Err(_) => Err(()),
-            },
+            Self::PlainUTF8Body => return std::str::from_utf8(body).map_err(|_| ()).map(|_| ()),
             Self::EmptyContentType { body_spec } => {
                 if !body_spec.required && body.is_empty() {
                     Ok(())
