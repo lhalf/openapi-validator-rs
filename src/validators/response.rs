@@ -5,12 +5,17 @@ pub struct ResponseValidator<'api> {
 }
 
 impl<'api> ResponseValidator<'api> {
-    pub fn validate_response(self, _response: &dyn Response) -> Result<(), ()> {
-        Ok(())
+    pub fn validate_response(self, response: &dyn Response) -> Result<(), ()> {
+        if response.status_code() == 200 {
+            return Ok(());
+        }
+        Err(())
     }
 }
 
-pub trait Response {}
+pub trait Response {
+    fn status_code(&self) -> u8;
+}
 
 #[cfg(test)]
 mod test_responses {
@@ -19,9 +24,15 @@ mod test_responses {
     use indoc::indoc;
     use std::collections::HashMap;
 
-    pub struct FakeResponse {}
+    pub struct FakeResponse {
+        pub status_code: u8,
+    }
 
-    impl Response for FakeResponse {}
+    impl Response for FakeResponse {
+        fn status_code(&self) -> u8 {
+            self.status_code
+        }
+    }
 
     #[test]
     fn validate_request_returns_a_response_validator_with_correct_status_code() {
@@ -41,7 +52,7 @@ mod test_responses {
             body: vec![],
             headers: HashMap::new(),
         };
-        let response = FakeResponse {};
+        let response = FakeResponse { status_code: 200 };
 
         assert!(make_validator_from_spec(path_spec)
             .validate_request(&request)
