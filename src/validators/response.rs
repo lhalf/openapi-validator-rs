@@ -35,7 +35,7 @@ mod test_responses {
     }
 
     #[test]
-    fn validate_request_returns_a_response_validator_with_correct_status_code() {
+    fn validate_request_returns_a_response_validator_with_valid_status_code() {
         let path_spec = indoc!(
             r#"
             paths:
