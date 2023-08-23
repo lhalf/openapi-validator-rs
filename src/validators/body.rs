@@ -1,7 +1,6 @@
 use crate::item_or_fetch::ItemOrFetch;
 use crate::to_jsonschema::ToJSONSchema;
 use crate::validators::jsonschema::JSONSchemaValidator;
-use openapiv3::{Components, RequestBody};
 
 pub enum BodyValidator<'api> {
     NoSpecification,
@@ -40,9 +39,9 @@ impl<'api> BodyValidator<'api> {
     }
 
     fn validate_json(
-        body_spec: &RequestBody,
+        body_spec: &openapiv3::RequestBody,
         body: &[u8],
-        components: &Option<Components>,
+        components: &Option<openapiv3::Components>,
     ) -> Result<(), ()> {
         if let Some(body_schema) = body_spec
             .content
