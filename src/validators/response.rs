@@ -6,7 +6,11 @@ pub struct ResponseValidator<'api> {
 
 impl<'api> ResponseValidator<'api> {
     pub fn validate_response(self, response: &dyn Response) -> Result<(), ()> {
-        if response.status_code() == 200 {
+        if self
+            .response_spec
+            .responses
+            .contains_key(&openapiv3::StatusCode::Code(response.status_code()))
+        {
             return Ok(());
         }
         Err(())
@@ -14,7 +18,7 @@ impl<'api> ResponseValidator<'api> {
 }
 
 pub trait Response {
-    fn status_code(&self) -> u8;
+    fn status_code(&self) -> u16;
 }
 
 #[cfg(test)]
@@ -25,17 +29,17 @@ mod test_responses {
     use std::collections::HashMap;
 
     pub struct FakeResponse {
-        pub status_code: u8,
+        pub status_code: u16,
     }
 
     impl Response for FakeResponse {
-        fn status_code(&self) -> u8 {
+        fn status_code(&self) -> u16 {
             self.status_code
         }
     }
 
     #[test]
-    fn validate_request_returns_a_response_validator_with_valid_status_code() {
+    fn validate_a_response_with_valid_status_code() {
         let path_spec = indoc!(
             r#"
             paths:
@@ -59,5 +63,32 @@ mod test_responses {
             .unwrap()
             .validate_response(&response)
             .is_ok());
+    }
+
+    #[test]
+    fn reject_a_response_with_invalid_status_code() {
+        let path_spec = indoc!(
+            r#"
+            paths:
+              /my/path:
+                post:
+                  responses:
+                    200:
+                      description: API call successful
+            "#
+        );
+        let request = FakeRequest {
+            url: "http:/test.com/my/path".to_string(),
+            operation: "post".to_string(),
+            body: vec![],
+            headers: HashMap::new(),
+        };
+        let response = FakeResponse { status_code: 404 };
+
+        assert!(make_validator_from_spec(path_spec)
+            .validate_request(&request)
+            .unwrap()
+            .validate_response(&response)
+            .is_err());
     }
 }
