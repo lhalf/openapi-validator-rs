@@ -6,13 +6,14 @@ pub struct ResponseValidator<'api> {
 
 impl<'api> ResponseValidator<'api> {
     pub fn validate_response(self, response: &dyn Response) -> Result<(), ()> {
-        if self
+        if let Some(_response_spec) = self
             .response_spec
             .responses
-            .contains_key(&openapiv3::StatusCode::Code(response.status_code()))
+            .get(&openapiv3::StatusCode::Code(response.status_code()))
         {
             return Ok(());
         }
+
         Err(())
     }
 }
