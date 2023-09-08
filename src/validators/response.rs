@@ -10,15 +10,21 @@ impl<'api> ResponseValidator<'api> {
     }
 
     fn validate_status_code(self, status_code: u16) -> Result<(), ()> {
-        if let Some(_response_spec) = self
-            .response_spec
-            .responses
-            .get(&openapiv3::StatusCode::Code(status_code))
-        {
-            return Ok(());
-        }
+        dbg!(self.response_spec);
 
-        Err(())
+        let responses = &self.response_spec.responses;
+
+        responses
+            .get(&openapiv3::StatusCode::Code(status_code))
+            .or_else(|| responses.get(&Self::extract_range_from_status_code(status_code)))
+            .ok_or(())
+            .map(|_| ())
+    }
+
+    fn extract_range_from_status_code(status_code: u16) -> openapiv3::StatusCode {
+        openapiv3::StatusCode::Range(match status_code {
+            _ => 2,
+        })
     }
 }
 
@@ -95,5 +101,32 @@ mod test_responses {
             .unwrap()
             .validate_response(&response)
             .is_err());
+    }
+
+    #[test]
+    fn accept_a_response_with_a_status_code_within_range() {
+        let path_spec = indoc!(
+            r#"
+            paths:
+              /my/path:
+                post:
+                  responses:
+                    2XX:
+                      description: API call successful
+            "#
+        );
+        let request = FakeRequest {
+            url: "http:/test.com/my/path".to_string(),
+            operation: "post".to_string(),
+            body: vec![],
+            headers: HashMap::new(),
+        };
+        let response = FakeResponse { status_code: 250 };
+
+        assert!(make_validator_from_spec(path_spec)
+            .validate_request(&request)
+            .unwrap()
+            .validate_response(&response)
+            .is_ok());
     }
 }
