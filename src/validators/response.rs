@@ -23,7 +23,12 @@ impl<'api> ResponseValidator<'api> {
 
     fn extract_range_from_status_code(status_code: u16) -> openapiv3::StatusCode {
         openapiv3::StatusCode::Range(match status_code {
-            _ => 2,
+            100..=199 => 1,
+            200..=299 => 2,
+            300..=399 => 3,
+            400..=499 => 4,
+            500..=599 => 5,
+            _ => todo!(),
         })
     }
 }
@@ -37,6 +42,7 @@ mod test_responses {
     use crate::validators::request::test_helpers::*;
     use crate::validators::response::Response;
     use indoc::indoc;
+    use parameterized::parameterized;
     use std::collections::HashMap;
 
     pub struct FakeResponse {
@@ -103,17 +109,20 @@ mod test_responses {
             .is_err());
     }
 
-    #[test]
-    fn accept_a_response_with_a_status_code_within_range() {
-        let path_spec = indoc!(
-            r#"
-            paths:
-              /my/path:
-                post:
-                  responses:
-                    2XX:
-                      description: API call successful
-            "#
+    #[parameterized(range={"1XX", "2XX", "3XX", "4XX", "5XX"}, response_code={150, 250, 350, 450, 550})]
+    fn accept_a_response_with_a_status_code_within_range(range: &str, response_code: u16) {
+        let path_spec = format!(
+            indoc::indoc!(
+                r#"
+                paths:
+                  /my/path:
+                    post:
+                      responses:
+                        {}:
+                          description: API call successful
+                "#
+            ),
+            range
         );
         let request = FakeRequest {
             url: "http:/test.com/my/path".to_string(),
@@ -121,9 +130,11 @@ mod test_responses {
             body: vec![],
             headers: HashMap::new(),
         };
-        let response = FakeResponse { status_code: 250 };
+        let response = FakeResponse {
+            status_code: { response_code },
+        };
 
-        assert!(make_validator_from_spec(path_spec)
+        assert!(make_validator_from_spec(&path_spec)
             .validate_request(&request)
             .unwrap()
             .validate_response(&response)
