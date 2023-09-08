@@ -6,10 +6,14 @@ pub struct ResponseValidator<'api> {
 
 impl<'api> ResponseValidator<'api> {
     pub fn validate_response(self, response: &dyn Response) -> Result<(), ()> {
+        self.validate_status_code(response.status_code())
+    }
+
+    fn validate_status_code(self, status_code: u16) -> Result<(), ()> {
         if let Some(_response_spec) = self
             .response_spec
             .responses
-            .get(&openapiv3::StatusCode::Code(response.status_code()))
+            .get(&openapiv3::StatusCode::Code(status_code))
         {
             return Ok(());
         }
