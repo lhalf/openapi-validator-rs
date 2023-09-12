@@ -56,7 +56,7 @@ mod test_responses {
     }
 
     #[test]
-    fn validate_a_response_with_valid_status_code() {
+    fn accept_a_response_with_valid_status_code() {
         let path_spec = indoc!(
             r#"
             paths:
