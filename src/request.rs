@@ -16,7 +16,6 @@ impl Validator {
         Self { api }
     }
 
-    //take &self rather than self otherwise Validator is consumed by validate_request (dropped)
     pub fn validate_request(&self, request: &dyn Request) -> Result<ResponseValidator, ()> {
         let url = self.parse_url(request.url())?;
 
