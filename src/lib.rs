@@ -1,10 +1,11 @@
-mod item_or_fetch;
-mod to_jsonschema;
 mod body;
 mod content_type;
+mod item_or_fetch;
 mod jsonschema;
 mod operation;
 mod parameters;
-mod request;
+pub mod request;
 mod response;
+mod to_jsonschema;
 
+pub use request::Request;
