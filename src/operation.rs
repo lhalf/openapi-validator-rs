@@ -1,7 +1,7 @@
 use super::parameters::ParametersValidator;
-use crate::validators::content_type::ContentTypeValidator;
-use crate::validators::request::Request;
-use crate::validators::response::ResponseValidator;
+use crate::content_type::ContentTypeValidator;
+use crate::request::Request;
+use crate::response::ResponseValidator;
 use std::collections::HashMap;
 
 pub struct OperationValidator<'api, 'request> {
@@ -43,7 +43,7 @@ impl<'api, 'request> OperationValidator<'api, 'request> {
 
 #[cfg(test)]
 mod test_operations {
-    use crate::validators::request::test_helpers::*;
+    use crate::request::test_helpers::*;
     use indoc::indoc;
     use std::collections::HashMap;
 

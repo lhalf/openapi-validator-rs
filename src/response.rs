@@ -39,8 +39,8 @@ pub trait Response {
 
 #[cfg(test)]
 mod test_responses {
-    use crate::validators::request::test_helpers::*;
-    use crate::validators::response::Response;
+    use crate::request::test_helpers::*;
+    use crate::response::Response;
     use indoc::indoc;
     use parameterized::parameterized;
     use std::collections::HashMap;

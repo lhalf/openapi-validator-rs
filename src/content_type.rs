@@ -35,7 +35,7 @@ impl<'api> ContentTypeValidator<'api> {
 
 #[cfg(test)]
 mod test_content_type {
-    use crate::validators::request::test_helpers::*;
+    use crate::request::test_helpers::*;
     use indoc::indoc;
     use std::collections::HashMap;
 

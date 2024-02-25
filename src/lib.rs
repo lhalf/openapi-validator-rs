@@ -1,5 +1,10 @@
 mod item_or_fetch;
 mod to_jsonschema;
-mod validators;
-pub use validators::request::{Request, Validator};
-pub use validators::response::Response;
+mod body;
+mod content_type;
+mod jsonschema;
+mod operation;
+mod parameters;
+mod request;
+mod response;
+

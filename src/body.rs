@@ -1,6 +1,6 @@
 use crate::item_or_fetch::ItemOrFetch;
 use crate::to_jsonschema::ToJSONSchema;
-use crate::validators::jsonschema::JSONSchemaValidator;
+use crate::jsonschema::JSONSchemaValidator;
 
 pub enum BodyValidator<'api> {
     NoSpecification,
@@ -68,7 +68,7 @@ impl<'api> BodyValidator<'api> {
 
 #[cfg(test)]
 mod test_body {
-    use crate::validators::request::test_helpers::*;
+    use crate::request::test_helpers::*;
     use indoc::indoc;
     use std::collections::HashMap;
 

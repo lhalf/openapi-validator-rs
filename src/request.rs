@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use url::Url;
 
 use super::operation::OperationValidator;
-use crate::validators::response::ResponseValidator;
+use crate::response::ResponseValidator;
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Validator {
@@ -237,7 +237,7 @@ mod test_url {
 
 #[cfg(test)]
 mod test_paths {
-    use crate::validators::request::test_helpers::*;
+    use crate::request::test_helpers::*;
     use indoc::indoc;
     use std::collections::HashMap;
 

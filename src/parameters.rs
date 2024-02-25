@@ -4,7 +4,7 @@ use url::Url;
 use super::request::Request;
 use crate::item_or_fetch::ItemOrFetch;
 use crate::to_jsonschema::ToJSONSchema;
-use crate::validators::jsonschema::JSONSchemaValidator;
+use crate::jsonschema::JSONSchemaValidator;
 
 pub struct ParametersValidator<'api, 'request> {
     pub operation_spec: &'api openapiv3::Operation,
@@ -88,7 +88,7 @@ impl ExtractQueryParameter for Url {
 
 #[cfg(test)]
 mod test_header_parameters {
-    use crate::validators::request::test_helpers::*;
+    use crate::request::test_helpers::*;
     use indoc::indoc;
     use std::collections::HashMap;
 
@@ -422,7 +422,7 @@ mod test_header_parameters {
 
 #[cfg(test)]
 mod test_query_parameters {
-    use crate::validators::request::test_helpers::*;
+    use crate::request::test_helpers::*;
     use indoc::indoc;
     use std::collections::HashMap;
 
@@ -745,7 +745,7 @@ mod test_query_parameters {
 
 #[cfg(test)]
 mod test_path_parameters {
-    use crate::validators::request::test_helpers::*;
+    use crate::request::test_helpers::*;
     use indoc::indoc;
     use std::collections::HashMap;
 
